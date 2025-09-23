@@ -1,0 +1,1376 @@
+{
+  "data": {
+    "attempt_start_time": "2025-09-21T13:57:56.938000",
+    "is_student_assigned": true,
+    "test": {
+      "description": "asd",
+      "duration_seconds": 10800,
+      "end_datetime": "2025-10-04T19:04:00",
+      "id": "68cbdf91638a169ade671951",
+      "instructions": "sad",
+      "no_of_students": 0,
+      "sections_open": [
+        {
+          "description": "asas",
+          "duration": 30,
+          "id": "68cbe0862fe6f573893051d1",
+          "instructions": "<p>asd</p>",
+          "is_shuffle_options": false,
+          "is_shuffle_question": false,
+          "name": "sec2",
+          "no_of_questions": 34,
+          "questions": [
+            {
+              "question": {
+                "id": "68cbe0ba2fe6f573893051d9",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "f36eaeaf-f41a-4494-ad05-2803e78e9018",
+                    "value": "- To ensure data integrity and efficient queries  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "54f28550-9894-4d02-acef-072cdaff6e3e",
+                    "value": "- To avoid the use of indexes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "1381c44e-f2de-43a4-a468-d03eeacc6968",
+                    "value": "- To replicate data across nodes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "7ca29450-f808-4529-9f24-82db19735a10",
+                    "value": "- To reduce replication lag  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why is schema design important in relational databases?\n",
+                "title": "Database Schema Design"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0ba2fe6f573893051da",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "db861010-59c9-418b-90e5-5b60db0df109",
+                    "value": "- OLAP system  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c05558f5-2bb6-4c98-a79f-5e69f6076287",
+                    "value": "- OLTP system  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "17e0debb-6035-40b6-8ffc-56003c614e71",
+                    "value": "- Key-value store  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a565faf3-60fa-4ede-a9e6-bff0e0ae5e43",
+                    "value": "- In-memory cache  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which type of system is optimized for complex queries and data analysis?\n",
+                "title": "OLTP vs OLAP"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0ba2fe6f573893051db",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "a9962686-e89c-49ff-b10a-339f87f19c3a",
+                    "value": "- To optimize query caching  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "718bbf3f-2ed8-4fb2-af7e-7dc54c259e4f",
+                    "value": "- To enforce strict normalization  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b29735cc-ebf8-471d-945f-cfa36aa1b008",
+                    "value": "- To reduce index size  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a53e9e72-0fbd-47f3-acb8-7ef5382eec4f",
+                    "value": "- To automatically switch to a standby database during failures  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the purpose of a failover mechanism in databases?\n",
+                "title": "Database Failover"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0ba2fe6f573893051dc",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "cfa78cce-69bd-40e8-8701-e3be811b4ca9",
+                    "value": "- The time taken to establish a database connection  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "d84aec7f-8342-4184-aa68-5a631ad85593",
+                    "value": "- The delay in building indexes after inserts  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "f37da8a9-3fc3-45a6-a953-79319ead0b6e",
+                    "value": "- The delay between a write on the primary and its visibility on replicas  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "550b06c6-c406-4ec7-8ee4-076eab759390",
+                    "value": "- The latency of executing a complex query  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is replication lag in databases?\n",
+                "title": "Database Replication Lag"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bb2fe6f573893051dd",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "3e066067-3aae-424a-9877-a59cb50b0a90",
+                    "value": "- Read Uncommitted  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "524444bd-055a-4d80-b77f-a76018638c3c",
+                    "value": "- Repeatable Read  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "459b268d-d495-4e99-9efe-b42cc6ed1577",
+                    "value": "- Read Committed  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "134d7d9d-e289-48ea-bfbc-d968acb6bb70",
+                    "value": "- Serializable  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which isolation level prevents dirty reads but allows non-repeatable reads?\n",
+                "title": "Database Isolation Levels"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bb2fe6f573893051de",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "9f098adc-8849-4d52-99a7-9d49b6af51ce",
+                    "value": "- Consistency  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "3c99eb7f-3c41-4d2f-a923-b364d04cced7",
+                    "value": "- Atomicity  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b55b8448-2c5c-4203-9143-d423cc3a988f",
+                    "value": "- Isolation  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "51e9967f-30f2-4879-b187-7fe2eb81bed5",
+                    "value": "- Durability  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which property ensures that a database transaction is applied completely or not at all?\n",
+                "title": "Database Transactions"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bb2fe6f573893051df",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "ec90d675-196c-433f-85d4-3945f1fa1812",
+                    "value": "- To handle high-frequency transactional updates  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "7c684d69-d98e-4ec5-beed-ff4c1caa56a0",
+                    "value": "- To support analytical queries and reporting  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a1a9e3e6-7bc4-4404-ac0e-7eaed491d78b",
+                    "value": "- To enforce ACID compliance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "807baa90-8b94-4ebe-bfa9-8981718ae829",
+                    "value": "- To replace operational databases  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the primary purpose of a data warehouse?\n",
+                "title": "Data Warehouse"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bb2fe6f573893051e0",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "bf6a3275-8a27-461e-ab34-6506818c2126",
+                    "value": "- Data warehouse  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c79bc3ad-d07a-4b25-bc80-99b1dfbb5036",
+                    "value": "- In-memory database  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "44b7a4e8-9a42-4afd-8995-1873d897c89e",
+                    "value": "- Relational database  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "312e98b4-1f5a-429b-a66b-ac1903f772b7",
+                    "value": "- NoSQL database  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which type of database is best suited for flexible schema and large-scale unstructured data?\n",
+                "title": "Relational vs NoSQL Databases"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bb2fe6f573893051e1",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "53606b8e-e239-44ff-8c0e-abb298f2321a",
+                    "value": "- Stronger encryption  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "5f74df7c-6391-449d-b186-96f6e99fbcd2",
+                    "value": "- Guaranteed elimination of replication lag  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "fb20e48c-e7f4-4774-a0cd-579bd541da5d",
+                    "value": "- Improved query performance and scalability  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "8aab0807-89a8-4d38-a1dd-4290ea47ca1c",
+                    "value": "- Elimination of indexing needs  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which of the following is an advantage of database partitioning?\n",
+                "title": "Database Partitioning"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bc2fe6f573893051e2",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "b8ade96c-2ee0-4295-b025-4c3e39edfcc8",
+                    "value": "- To enforce strict ACID guarantees  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "f33d5ae9-7435-4777-844f-74d5b5e6dc0d",
+                    "value": "- To minimize storage usage  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "7fca46ea-0f3b-4649-a76d-e776d4b889e1",
+                    "value": "- To improve read performance at the cost of redundancy  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "77df2ac6-db9c-4e66-a64d-99d03b9fb5f7",
+                    "value": "- To remove the need for indexes  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why might denormalization be applied in database design?\n",
+                "title": "Database Denormalization"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bc2fe6f573893051e3",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "8fb6eff7-6f72-48ba-9c0b-d5d75e374e6c",
+                    "value": "- To increase query execution speed always  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "8adf59f2-9c74-4888-8a83-05cebb3f5cee",
+                    "value": "- To reduce redundancy and improve consistency  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "8875f375-2c06-4b3b-aee6-a9e5599c0b59",
+                    "value": "- To replace indexes completely  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ef1ebb51-2879-4dc9-9f4b-b8b40cb41f4a",
+                    "value": "- To eliminate joins in queries  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the main goal of normalization in database design?\n",
+                "title": "Database Normalization"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bc2fe6f573893051e4",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "d7152f44-cda3-4801-9673-d1558f8087ed",
+                    "value": "- To simplify schema design  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "5114e6f7-8c3d-4a2f-84e0-37181babd7c8",
+                    "value": "- To eliminate the need for caching  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c8cbca83-7daf-4338-b49c-10205180af0f",
+                    "value": "- To guarantee strict ACID compliance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "8ebc0d76-0e2b-4d64-8355-adf88bb8e3f3",
+                    "value": "- To distribute load across multiple servers  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the primary benefit of sharding a database?\n",
+                "title": "Database Sharding"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bc2fe6f573893051e5",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "abf3fbd9-96e6-4b49-812f-461250ad731a",
+                    "value": "- To reduce disk size  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b29aeaca-c412-4b78-9a90-606dc3cc0d54",
+                    "value": "- To encrypt data  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "26900417-8977-4de4-a18e-6d233a2474ba",
+                    "value": "- To speed up query retrieval  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "32ad4f07-f5ea-4735-baba-1b6ffc825b3d",
+                    "value": "- To enforce ACID properties  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the main purpose of using indexes in databases?\n",
+                "title": "Database Indexes"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bd2fe6f573893051e6",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "91423b56-22c1-4fa8-bfb1-8aa3c8ab5890",
+                    "value": "- Encrypting all database data  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ad6c59f5-8386-4a2b-818f-386538ac03bf",
+                    "value": "- Load balancing queries across replicas  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "7e923aea-9c12-4a18-8e2e-afd6ea267ff7",
+                    "value": "- Replacing database indexes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "e68f8fb1-7aa6-4cae-8597-965027e824b4",
+                    "value": "- Performing schema migrations  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is a common role of a database proxy layer in large systems?\n",
+                "title": "Database Proxy Layer"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bd2fe6f573893051e7",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "4ab3d063-689e-4736-92fb-3c63bb2b2f62",
+                    "value": "- To eliminate the need for normalization  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "2e1eb7ef-ca09-4b4f-bc79-c05ab27a1d90",
+                    "value": "- To replace indexes completely  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "2c09830a-d635-4efd-b7af-aca15e1d1e45",
+                    "value": "- To dynamically enforce constraints on tables  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c5380359-a307-447c-bcb1-e3de709cedef",
+                    "value": "- To precompute and store query results for faster access  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why are materialized views used in databases?\n",
+                "title": "Database Materialized View"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bd2fe6f573893051e8",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "30d4d319-dfc9-438d-8c26-813b37060ac9",
+                    "value": "- Lack of replication  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "fe9739fd-9016-45c9-b51d-b46d310bc5fe",
+                    "value": "- Inability to scale reads  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "cfe91c35-5056-4003-90c1-e31a33ed41ae",
+                    "value": "- Conflict resolution between concurrent writes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "18295d64-d61a-4683-aa2b-939a8fbbdea8",
+                    "value": "- Poor transaction durability  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is a common challenge in multi-primary (multi-master) database setups?\n",
+                "title": "Multi-Primary Databases"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bd2fe6f573893051e9",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "89d3d3f1-340a-4197-95dd-d6ea6b1d4297",
+                    "value": "- Disabling indexing entirely  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "0f694f91-deb5-4208-af47-0d59dd81ca92",
+                    "value": "- Using a write-ahead log and batching writes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "93a9b3d7-1547-45ca-87d0-6021e72808d6",
+                    "value": "- Forcing synchronous replication on every write  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "003b06c3-315a-48ea-af9b-728d75e67c02",
+                    "value": "- Avoiding caching layers  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which technique helps reduce write bottlenecks in high-throughput systems?\n",
+                "title": "Database Write Bottleneck"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bd2fe6f573893051ea",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "a3026c37-5ffa-4805-b90a-dca03589e27e",
+                    "value": "- Consistency is ignored completely  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "0edf6d96-ef0c-4466-bcc2-81268918ca23",
+                    "value": "- Data is never replicated across nodes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a22c0240-7280-44c6-906c-6553a2fea27f",
+                    "value": "- All replicas are always consistent instantly  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "6c83217a-a3ec-4615-9319-76d07acba3a4",
+                    "value": "- All replicas will converge to the same state over time  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "In distributed databases, what does eventual consistency mean?\n",
+                "title": "Eventual Consistency"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0be2fe6f573893051eb",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "af816dbf-5ca4-4d03-ac28-11a0bd09324f",
+                    "value": "- To encrypt sensitive user data  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "cb3f30ff-c088-4c36-9651-ea02a4040f89",
+                    "value": "- To replicate writes across regions  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "33d20623-6c49-49e7-a276-ece08695c56a",
+                    "value": "What is the purpose of Write-Ahead Logging (WAL) in database systems?"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "cb8e298b-41b2-4ff2-95a8-e66c267bf2c1",
+                    "value": "- To reduce query latency  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the purpose of Write-Ahead Logging (WAL) in database systems?\n",
+                "title": "Write-Ahead Logging"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0be2fe6f573893051ec",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "10753d86-2ea9-4592-a8e4-b4529fb8e4f0",
+                    "value": "- To shard tables across multiple nodes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c040b98f-549e-4a5b-b0b7-89fcec8d1419",
+                    "value": "- To store encrypted copies of data  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "bbb3b93a-1dcf-4922-b09d-409d921cc577",
+                    "value": "- To reuse existing database connections for efficiency  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "8a922b18-2ef6-40cc-ad6e-1af9d865668d",
+                    "value": "- To implement database caching  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the role of a connection pool in database design?\n",
+                "title": "Database Connection Pool"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0be2fe6f573893051ed",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "01d50846-b3a2-4489-a70c-8672fdd26f5d",
+                    "value": "- Availability and Partition tolerance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ef846ad2-8385-40ce-a3a2-58a213a43111",
+                    "value": "- Consistency and Partition tolerance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "2ccfac2d-0dc9-4dd9-b987-bb2957884880",
+                    "value": "- Consistency and Availability  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "94a3cb16-6a59-4252-aa9f-9c13891defd3",
+                    "value": "- All three at once  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "According to the CAP theorem, which two guarantees can a distributed database provide simultaneously?\n",
+                "title": "CAP Theorem and Databases"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0be2fe6f573893051ee",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "e3a12bb2-a0cd-4eed-baaa-bdcffb9a715b",
+                    "value": "- To scale read-heavy workloads  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "9b274f14-0629-43ad-b344-67f01521b82f",
+                    "value": "- To guarantee zero data inconsistency  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c78011ab-616a-40a9-bf58-87b99f72014e",
+                    "value": "- To perform faster writes  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "4e165a1d-c926-44cf-bba5-0ed7ec671c2e",
+                    "value": "- To reduce disk size  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the primary purpose of using read replicas in database systems?\n",
+                "title": "Read Replica Usage"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0be2fe6f573893051ef",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "17dca440-de26-47d7-9b9b-0f11d4fc9d9c",
+                    "value": "- To reduce query latency and offload frequent reads  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "bf2267cc-6fc8-476a-b850-9b5719114d34",
+                    "value": "- To guarantee strict ACID compliance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b98b7d6f-6e6f-4035-a3e8-9b9e2cf9f895",
+                    "value": "- To simplify database normalization  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b0c06241-22f3-481d-bbe9-2db965254019",
+                    "value": "- To store encrypted backups  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why do large-scale systems often add a caching layer in front of the database?\n",
+                "title": "Database Caching Layer"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bf2fe6f573893051f0",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "e6329e91-7b96-47ae-a17c-6db3f2f8ffdf",
+                    "value": "- Horizontal splits rows, vertical splits columns  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "d4aab5c5-1bc6-44b6-8ad6-d8b7621ff434",
+                    "value": "- Horizontal splits columns, vertical splits rows  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "122dbdb2-b17a-4668-8798-b961167bc984",
+                    "value": "- Horizontal encryption, vertical compression  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "d1b7cee9-7f1d-4b63-a709-6a630ba74096",
+                    "value": "- Horizontal replication, vertical sharding  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the difference between horizontal and vertical partitioning in database design?\n",
+                "title": "Database Partitioning"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bf2fe6f573893051f1",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "d32765d5-884d-47bd-a9ad-d7751610f2a6",
+                    "value": "- To improve query performance by reducing joins  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "02ee307f-dc69-49bf-a99d-71731beb5c3e",
+                    "value": "- To increase redundancy and inconsistency intentionally  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "61387de1-e129-43de-be88-2ba833ed6268",
+                    "value": "- To enforce strong ACID compliance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "734b9c4e-61be-45c0-a68a-4cd68e731f8a",
+                    "value": "- To minimize disk storage usage  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why might a database be denormalized in system design?\n",
+                "title": "Database Denormalization"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bf2fe6f573893051f2",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "f5266ecf-95db-4c32-a6f3-c2be08f7581e",
+                    "value": "- To reduce redundancy and improve data integrity  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "2996e5ae-105c-41c1-adc5-b394405d1e5b",
+                    "value": "- To maximize query execution speed  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "9df96662-a331-45a2-8250-9619e492292e",
+                    "value": "- To enforce data encryption  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "c91b0270-febc-4877-8d10-940161574618",
+                    "value": "- To simplify sharding  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the primary goal of database normalization?\n",
+                "title": "Database Normalization"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bf2fe6f573893051f3",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "061ff435-ba87-4dcc-9795-0daa8114679b",
+                    "value": "- OLAP is optimized for complex queries on large data sets  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "e2e0f38b-507b-4e5b-800e-a06e5eccbb06",
+                    "value": "- OLAP is used for real-time transaction processing  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ebd4cba8-a89c-4e01-85eb-f1a51588348f",
+                    "value": "- OLAP enforces strict row-level locks for concurrency  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ae60bbc7-15a2-4fae-8733-e5f4658ccd2c",
+                    "value": "- OLAP avoids using indexes to reduce overhead  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which statement correctly describes OLAP compared to OLTP?\n",
+                "title": "OLAP vs OLTP"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0bf2fe6f573893051f4",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "de4676f6-800a-4654-9837-0796aa966bc9",
+                    "value": "- Fast read-write transactions with many users  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "1af8850f-ce20-42ad-bba2-e1c7107dbc7f",
+                    "value": "- Complex analytical queries over historical data  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "d998aba3-91a5-41c0-96b8-e585bc0a9ef1",
+                    "value": "- Streaming sensor data continuously  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "16d00246-41e3-4aa5-ac4d-9ffe770b31ae",
+                    "value": "- Batch jobs with long runtimes  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which type of workload is OLTP (Online Transaction Processing) optimized for?\n",
+                "title": "OLTP Database Design"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0c02fe6f573893051f5",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "cbc3c2dd-eb1f-435d-a7ac-8fb9a4007b17",
+                    "value": "- To improve availability and fault tolerance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ee987990-2d2a-442b-bb5b-56c7b163721d",
+                    "value": "- To reduce storage requirements  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "1fb0bde0-cb02-4a84-b04e-7182f0763bc1",
+                    "value": "- To simplify schema migrations  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "8800a769-23f3-41a9-863c-7ef2acdab304",
+                    "value": "- To avoid all writes to the master  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the main purpose of database replication?\n",
+                "title": "Database Replication"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0c02fe6f573893051f6",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "24654806-6c44-483c-84cc-1d5bb7599102",
+                    "value": "- To speed up query retrieval operations  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ca42299e-476b-4814-b723-42d321bb6625",
+                    "value": "- To reduce database schema complexity  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "f273c1ac-dccf-400f-b455-defff465ad12",
+                    "value": "- To enforce primary key constraints  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "e2189934-98a8-4392-bf99-cba3b7cf83c9",
+                    "value": "- To replicate data across servers  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why are indexes used in database design?\n",
+                "title": "Database Indexing"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0c02fe6f573893051f7",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "88fcfb68-7985-4eae-aca8-8407f185f048",
+                    "value": "- To split data horizontally across multiple servers  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "978594ef-78dd-4fff-921d-4bde862eac40",
+                    "value": "- To replicate the same data on all servers  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "2bf45846-1544-4195-a8ac-dce01544d796",
+                    "value": "- To encrypt sensitive data fields  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "50ff8ecc-172c-40a2-90db-49f1d49fd291",
+                    "value": "- To compress storage usage  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the purpose of database sharding?\n",
+                "title": "Database Sharding"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0c02fe6f573893051f8",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "8cbf2768-2510-4ea7-94db-3c8d06b925f9",
+                    "value": "- To handle flexible schemas and horizontal scalability  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "32d84209-68c6-41b0-9984-dd6cf681e15f",
+                    "value": "- To guarantee strict ACID compliance  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "7052f2d5-b32f-4e50-bcbf-823b15ba6a7a",
+                    "value": "- To simplify complex joins  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a4b049eb-94be-4cb6-aacc-0c4660ae2f34",
+                    "value": "- To avoid all consistency requirements  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why might a designer choose a NoSQL database over a relational database?\n",
+                "title": "NoSQL Advantage"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0c12fe6f573893051f9",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "ed2c7756-597a-401d-83d6-7ff1101f3ebd",
+                    "value": "- Applications with structured data and strong consistency  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "0daf250e-de19-45d8-92a7-ca190f63e22d",
+                    "value": "- Applications requiring real-time streaming of logs  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "7cf6f2aa-0f08-4c54-8185-56263305db9c",
+                    "value": "- Applications handling unstructured video files  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "e3cf8561-7ffc-4a56-8c91-8df74b51bb7c",
+                    "value": "- Applications optimized only for key-value access  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which type of applications are relational databases most suitable for?\n",
+                "title": "Relational Database Use Case"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0c12fe6f573893051fa",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "cfa49386-943d-4a61-b3b3-c58da626c386",
+                    "value": "Adding more servers to distribute the load"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "9388dcea-c49e-4b54-bd3a-e1381dd7acb5",
+                    "value": "Increasing the capacity of a single machine (e.g., CPU, RAM) "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "0bb71666-a2e9-491a-93a3-4922a8c50af0",
+                    "value": "Using caching layers to reduce database load  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "dd69c7e8-8993-47ac-9c1d-c02689fdf4fb",
+                    "value": " Replicating data across multiple regions  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Which of the following best describes **vertical scaling** in system design?\n",
+                "title": "Vertical vs Horizontal Scaling"
+              },
+              "question_type": "mcq"
+            }
+          ],
+          "time_restricted": false
+        }
+      ],
+      "sections_time_restricted": [
+        {
+          "description": "sadd",
+          "duration": 30,
+          "id": "68cbe07f2fe6f573893051d0",
+          "instructions": "<p>das</p>",
+          "is_shuffle_options": false,
+          "is_shuffle_question": false,
+          "name": "sec1",
+          "no_of_questions": 8,
+          "questions": [
+            {
+              "question": {
+                "id": "68cbe0902fe6f573893051d2",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "a089b5e1-6a0e-4cb9-b566-c4154fa68657",
+                    "value": "MacOS"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "f334599f-881f-477e-9289-c38fec656176",
+                    "value": "Linux"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a99c529e-9863-4de2-bdce-7825b9030c76",
+                    "value": "Windows"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "e258961b-e709-4161-9e84-242adb5c3741",
+                    "value": "All"
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is OS?What is OS?What is OS?What is OS?What is OS?What is OS?What is OS?What is OS?",
+                "title": "What is OS?"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0a32fe6f573893051d3",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "d7cbfa7c-af6b-41d8-a44f-e0be39f10aaf",
+                    "value": "Reduce network latency by placing data near computation  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "0220143e-6c74-45bb-8710-cbe88288060f",
+                    "value": "Increase CPU clock speed  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "9133b70b-a1c5-4ad8-ab47-99a5b92db124",
+                    "value": "Improve database schema normalization"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "fca907f4-8009-4d4e-bdc0-f7744fea5f90",
+                    "value": "Simplify application logic"
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Improving **data locality** in a distributed system mainly helps to:\n",
+                "title": "Data Locality"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0a32fe6f573893051d4",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "949fd382-e209-43d8-bbf9-ab8c6d7579b7",
+                    "value": " Dynamic adjustment of traffic distribution as servers scale in or out "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "144df69d-a8d1-481c-8c77-3cc834f04c52",
+                    "value": "Encryption of traffic between clients and servers"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b3d9979f-6850-47c9-b15d-2530ce6c3efe",
+                    "value": "Database schema migration automation  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "5b81fdcc-06cb-4b57-b0af-24e64f82218e",
+                    "value": "Consistent hashing of session IDs"
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Elastic load balancing primarily ensures:\n",
+                "title": "Elastic Load Balancing"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0a32fe6f573893051d5",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "738dc783-ec1e-43c4-9afe-203e51110756",
+                    "value": "They guarantee faster database queries  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "9bce6ec7-72b6-41e4-a68c-720fbebd7302",
+                    "value": "They allow safe retries without side effects"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "26c1d6c3-06c1-431c-9033-76fe9261cb16",
+                    "value": "They compress data automatically"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "53a8bebc-220e-4f53-8b34-d8e3be7392ff",
+                    "value": "They enforce strict serial execution  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "Why are **idempotent operations** important in distributed scalable systems?\n",
+                "title": "Idempotent Operations"
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0a32fe6f573893051d6",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "7ee475bf-1a92-4691-89a6-4877f5c4b03b",
+                    "value": " Improve physical network capacity  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a690349a-e60e-49dc-ba7c-a24c1c86c686",
+                    "value": "Prevent repeated requests to a failing service "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "9eb0274c-8a38-41d0-a9a7-0303d082c60d",
+                    "value": "Automatically scale the database cluster  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "ad4ae852-a326-48ce-bb17-dca854b9bdba",
+                    "value": "Compress API responses  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "The **circuit breaker pattern** in scalable services helps to:\n",
+                "title": "Circuit Breaker Pattern" 
+              },
+              "question_type": "mcq"
+            },
+            {
+              "question": {
+                "id": "68cbe0aa2fe6f573893051d7",
+                "is_drag_and_drop": true,
+                "items": [
+                  {
+                    "images": [],
+                    "item_id": "5449aa52-a707-4983-872e-902997ba6a2c",
+                    "value": "Test1"
+                  },
+                  {
+                    "images": [],
+                    "item_id": "8ec0d3a9-4f7b-426e-a1c0-ae3c0089dcd2",
+                    "value": "Test3"
+                  },
+                  {
+                    "images": [],
+                    "item_id": "15caa4b5-cf0b-4bbc-99f0-f32aba571482",
+                    "value": "Test4"
+                  },
+                  {
+                    "images": [],
+                    "item_id": "00a6a5db-ee99-4c5a-8df5-adb7be97f34e",
+                    "value": "Test2"
+                  }
+                ],
+                "prompt": "Test ",
+                "question_images": [],
+                "title": "Test"
+              },
+              "question_type": "rearrange"
+            },
+            {
+              "question": {
+                "allowed_languages": [],
+                "id": "68cbe0ae2fe6f573893051d8",
+                "long_description_markdown": null,
+                "predefined_boilerplates": {},
+                "run_code_enabled": true,
+                "sample_io": [],
+                "short_description": "demo",
+                "submission_enabled": true,
+                "title": "print even or odd"
+              },
+              "question_type": "coding"
+            },
+            {
+              "question": {
+                "id": "68cead206ace49ab52f164ad",
+                "is_multiple": false,
+                "options": [
+                  {
+                    "images": [],
+                    "option_id": "1a425b50-2b75-4ce2-bd9e-9eb1947df99a",
+                    "value": "Reduce schema complexity  "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "efb63d80-7d29-40dd-b5a3-6f3911ccce4a",
+                    "value": "Distribute data across multiple servers for scalability"
+                  },
+                  {
+                    "images": [],
+                    "option_id": "a2a4eb14-769c-4fbd-81b4-b19359c70e4a",
+                    "value": "Improve encryption "
+                  },
+                  {
+                    "images": [],
+                    "option_id": "b03c7b1e-342c-448e-bed1-f7ccd72e66f1",
+                    "value": "Simplify indexing  "
+                  }
+                ],
+                "question_images": [],
+                "question_text": "What is the main goal of **database sharding**?\n",
+                "title": "Database Sharding"
+              },
+              "question_type": "mcq"
+            }
+          ],
+          "time_restricted": true
+        }
+      ],
+      "start_datetime": "2025-09-05T18:03:00",
+      "test_name": "Lokesh e",
+      "total_sections": 2
+    },
+    "test_start_time": "2025-09-05T18:03:00"
+  },
+  "message": "test fetched",
+  "success": true
+}
