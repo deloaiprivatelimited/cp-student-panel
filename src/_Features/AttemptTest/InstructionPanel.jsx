@@ -177,7 +177,7 @@ export default function InstructionsPanel({
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] text-white p-6 relative">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="m-0 text-xl font-semibold">Please read the instructions</h1>

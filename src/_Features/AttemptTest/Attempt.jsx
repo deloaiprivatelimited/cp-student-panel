@@ -53,6 +53,7 @@ const INSTRUCTIONS = [
     format: "text",
   },
 ];
+const HEADER_HEIGHT = 64; // px — change to 56/72 as you like
 
 // ---- FIXED: all durations are in seconds ----
 const INSTRUCTION_TOTAL_SECONDS = 2; // 2 minutes (seconds) — adjust as needed
@@ -102,6 +103,8 @@ const Attempt = () => {
 
   const [secondsLeft, setSecondsLeft] = useState(null);
   const testTimerRef = useRef(null);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
   const payloadRef = useRef(null);
   useEffect(() => {
     payloadRef.current = payload;
@@ -938,22 +941,55 @@ switch (it.type) {
     if (nxt < (activeTimeSection?.questions || []).length) {
       setCurrentQuestionIndex(nxt);
     } else {
-      showAlert("End of section questions. You can Advance Section or wait for timer to auto-advance.");
+      showAlert("End of section questions. You can Submit Section to conitnue with next section.");
     }
   };
 
-  const advanceOpenQuestionAfterSave = (sectionId) => {
-    if (!sectionId) return;
-    const sec = openSections.find((s) => s.id === sectionId);
-    if (!sec) return;
-    const currentIdx = currentOpenQuestionIndex;
-    const nxt = currentIdx + 1;
-    if (nxt < (sec?.questions || []).length) {
-      setCurrentOpenQuestionIndex(nxt);
-    } else {
-      showAlert("End of section questions.");
-    }
-  };
+const advanceOpenQuestionAfterSave = (sectionId) => {
+  if (!sectionId) return;
+  const secIndex = openSections.findIndex((s) => s.id === sectionId);
+  if (secIndex === -1) return;
+
+  const sec = openSections[secIndex];
+  const currentIdx = currentOpenQuestionIndex;
+  const nxt = currentIdx + 1;
+
+  // If next question exists in same section -> move to it
+  if (nxt < (sec?.questions || []).length) {
+    setCurrentOpenQuestionIndex(nxt);
+    return;
+  }
+
+  // End of current section: mark section completed
+  setCompletedSections((prev) => {
+    const nextSet = new Set(prev);
+    nextSet.add(sectionId);
+    return nextSet;
+  });
+
+  // Try to advance to next open section (if available)
+  const nextSectionIndex = secIndex + 1;
+  if (nextSectionIndex < openSections.length) {
+    const nextSection = openSections[nextSectionIndex];
+    setCurrentOpenSectionId(nextSection.id);
+    setCurrentOpenQuestionIndex(0);
+    // ensure questionStates for first question marked viewed
+    const firstQ = (nextSection.questions || [])[0];
+    const firstQId = firstQ?.id ?? firstQ?.question_id ?? "0";
+    setQuestionStates((prev) => ({
+      ...prev,
+      [nextSection.id]: {
+        ...(prev[nextSection.id] || {}),
+        [firstQId]: { ...(prev[nextSection.id]?.[firstQId] || {}), viewed: true },
+      },
+    }));
+    return;
+  }
+
+  // No next section available
+  showAlert("End of Questions. Please Submit the Test");
+};
+
 
   // handlers for MCQ / Rearrange / Coding
   const handleMcqSolvedInTimeSection = (answerPayload) => {
@@ -1155,14 +1191,121 @@ switch (it.type) {
   };
 
   const handleMcqNextWithoutSaveInOpenSection = () => {
-    const active = openSections.find((s) => s.id === currentOpenSectionId);
-    const nxt = currentOpenQuestionIndex + 1;
-    if (nxt < (active?.questions || []).length) {
-      setCurrentOpenQuestionIndex(nxt);
-    } else {
-      showAlert("End of section questions.");
-    }
-  };
+  const secIndex = openSections.findIndex((s) => s.id === currentOpenSectionId);
+  if (secIndex === -1) return;
+
+  const active = openSections[secIndex];
+  const nxt = currentOpenQuestionIndex + 1;
+
+  // Move to next question if available
+  if (nxt < (active?.questions || []).length) {
+    setCurrentOpenQuestionIndex(nxt);
+    return;
+  }
+
+  // Otherwise, try next section
+  setCompletedSections((prev) => {
+    const nextSet = new Set(prev);
+    nextSet.add(active.id);
+    return nextSet;
+  });
+
+  const nextSectionIndex = secIndex + 1;
+  if (nextSectionIndex < openSections.length) {
+    const nextSection = openSections[nextSectionIndex];
+    setCurrentOpenSectionId(nextSection.id);
+    setCurrentOpenQuestionIndex(0);
+
+    const firstQ = (nextSection.questions || [])[0];
+    const firstQId = firstQ?.id ?? firstQ?.question_id ?? "0";
+    setQuestionStates((prev) => ({
+      ...prev,
+      [nextSection.id]: {
+        ...(prev[nextSection.id] || {}),
+        [firstQId]: { ...(prev[nextSection.id]?.[firstQId] || {}), viewed: true },
+      },
+    }));
+  } else {
+    showAlert("End of Questions.Please Submit the Test");
+  }
+};
+
+
+// Generic next for timed sections: only advance inside same section
+const handleNextInTimeSection = () => {
+  const activeTimeSection = timeSections[currentTimeSectionIndex];
+  if (!activeTimeSection) return;
+  const nxt = currentQuestionIndex + 1;
+  if (nxt < (activeTimeSection?.questions || []).length) {
+    setCurrentQuestionIndex(nxt);
+    const qObj = getQuestionObj(activeTimeSection.questions[nxt]);
+    const qId = qObj?.id ?? String(nxt);
+    setQuestionStates((prev) => ({
+      ...prev,
+      [activeTimeSection.id]: {
+        ...(prev[activeTimeSection.id] || {}),
+        [qId]: { ...(prev[activeTimeSection.id]?.[qId] || {}), viewed: true },
+      },
+    }));
+  } else {
+    // At end of timed section — do not auto-advance to next section from Next button
+    showAlert("End of section questions. You can Submit Section to continue to the next section.");
+  }
+};
+
+// Generic next for open sections: advance in-section, or advance to next section if available
+const handleNextInOpenSection = () => {
+  if (!currentOpenSectionId) return;
+  const secIndex = openSections.findIndex((s) => s.id === currentOpenSectionId);
+  if (secIndex === -1) return;
+
+  const active = openSections[secIndex];
+  const nxt = currentOpenQuestionIndex + 1;
+
+  // Move to next question in same section
+  if (nxt < (active?.questions || []).length) {
+    setCurrentOpenQuestionIndex(nxt);
+    const qObj = getQuestionObj(active.questions[nxt]);
+    const qId = qObj?.id ?? String(nxt);
+    setQuestionStates((prev) => ({
+      ...prev,
+      [active.id]: {
+        ...(prev[active.id] || {}),
+        [qId]: { ...(prev[active.id]?.[qId] || {}), viewed: true },
+      },
+    }));
+    return;
+  }
+
+  // End of this open section — mark completed and try to advance to next open section
+  setCompletedSections((prev) => {
+    const nextSet = new Set(prev);
+    nextSet.add(active.id);
+    return nextSet;
+  });
+
+  const nextSectionIndex = secIndex + 1;
+  if (nextSectionIndex < openSections.length) {
+    const nextSection = openSections[nextSectionIndex];
+    setCurrentOpenSectionId(nextSection.id);
+    setCurrentOpenQuestionIndex(0);
+
+    const firstQ = (nextSection.questions || [])[0];
+    const firstQId = firstQ?.id ?? firstQ?.question_id ?? "0";
+    setQuestionStates((prev) => ({
+      ...prev,
+      [nextSection.id]: {
+        ...(prev[nextSection.id] || {}),
+        [firstQId]: { ...(prev[nextSection.id]?.[firstQId] || {}), viewed: true },
+      },
+    }));
+    return;
+  }
+
+  // No next section available
+  showAlert("End of Questions. Please submit the test.");
+};
+
 
   // navigation functions used by sidebar
   const handleNavigateTimeSection = (sectionId, questionIndex) => {
@@ -1338,28 +1481,27 @@ switch (it.type) {
   }
 
   if (phase === "test") {
-    if (payload?._error) {
-      return (
-        <div className="min-h-screen bg-[#1E1E1E] text-white p-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-red-500">Failed to load test</h2>
-            <p className="text-[#CCCCCC]">{payload._error}</p>
-          </div>
-        </div>
-      );
-    }
-    if (payloadLoading ) {
-  // show a full-screen or inline loading state while payload is being fetched/initialized
-  return (
-    <div className="min-h-screen bg-[#1E1E1E] text-white flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full">
-        <div className="bg-[#2D2D30] rounded-lg p-6 border" style={{ borderColor: BORDER }}>
-          <LoadingSpinner label="Preparing your test — please wait…" />
+  if (payload?._error) {
+    return (
+      <div className="min-h-screen bg-[#1E1E1E] text-white p-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-red-500">Failed to load test</h2>
+          <p className="text-[#CCCCCC]">{payload._error}</p>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+   if (payloadLoading) {
+    return (
+      <div className="min-h-screen bg-[#1E1E1E] text-white flex items-center justify-center p-6">
+        <div className="max-w-2xl w-full">
+          <div className="bg-[#2D2D30] rounded-lg p-6 border" style={{ borderColor: BORDER }}>
+            <LoadingSpinner label="Preparing your test — please wait…" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
 
     const testName = payload?.data?.test?.test_name ?? payload?.test_name ?? payload?.test?.test_name ?? "Test Attempt";
@@ -1371,44 +1513,118 @@ switch (it.type) {
     const activeOpenQuestionObj = getQuestionObj(activeOpenSection?.questions?.[currentOpenQuestionIndex]);
 
     return (
-      <div className="bg-[#1E1E1E] min-h-screen text-white p-6 relative">
-        <div className="flex justify-between mb-5">
-          <div>
-            <h2 className="m-0 text-xl">{testName}</h2>
-          </div>
-          <div className="text-right">
-            <div className="text-[#CCCCCC] text-sm">Time Remaining</div>
-            <div className="text-[#4CA466] font-extrabold text-lg">{humanTime(secondsLeft)}</div>
-          </div>
+    <div className="bg-[#1E1E1E] text-white min-h-screen" style={{ height: "100vh", overflow: "hidden" }}>
+        <header
+        className="w-full flex items-center px-6"
+        style={{
+          height: HEADER_HEIGHT,
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 40,
+          background: BG,
+          borderBottom: `1px solid ${BORDER}`,
+        }}
+      >
+        <div className="flex-1">
+          <h2 className="m-0 text-xl">{testName}</h2>
         </div>
 
-        <div className="flex gap-4">
-          <div>
-            <AttemptSidebar
-              testData={payload}
-              currentSection={openModeActive ? currentOpenSectionId : (activeTimeSection?.id ?? null)}
-              currentQuestion={openModeActive ? currentOpenQuestionIndex : currentQuestionIndex}
-              onNavigate={openModeActive ? handleNavigateOpen : handleNavigateTimeSection}
-              mode={openModeActive ? "open" : "time"}
-              completedSections={completedSections}
-              questionStates={questionStates}
-            />
-          </div>
+        <div className="text-right">
+          <div className="text-[#CCCCCC] text-sm">Time Remaining</div>
+          <div className="text-[#4CA466] font-extrabold text-lg">{humanTime(secondsLeft)}</div>
+        </div>
+      </header>
+  <main
+        className="pt-0"
+        style={{
+          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+          paddingTop: 0,
+          paddingLeft: 0,
+          paddingRight: 0,
+          marginTop: HEADER_HEIGHT,
+          overflow: "hidden", // prevent page scroll; internal panes will scroll
+        }}
+      >
+        <div className="flex h-full">
 
-          <div className="flex-1">
+  <div className="h-full p-4">
+    {/* Pass expansion flag if you want AttemptSidebar to render compact vs full */}
+    <AttemptSidebar
+      small={!isSidebarExpanded}
+      testData={payload}
+      currentSection={openModeActive ? currentOpenSectionId : (activeTimeSection?.id ?? null)}
+      currentQuestion={openModeActive ? currentOpenQuestionIndex : currentQuestionIndex}
+      onNavigate={openModeActive ? handleNavigateOpen : handleNavigateTimeSection}
+      mode={openModeActive ? "open" : "time"}
+      completedSections={completedSections}
+      questionStates={questionStates}
+    />
+  </div>
+
+
+           <section
+  className="flex-1 overflow-hidden min-w-0"
+  style={{
+    height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+  }}
+>
+
+ <div className="flex-1">
             {!openModeActive && activeTimeSection && (
               <div className="bg-[#2D2D30] rounded-lg p-4 border" style={{ borderColor: BORDER }}>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold">{activeTimeSection.name}</div>
-                    <div className="text-[#CCCCCC] text-sm">{activeTimeSection.no_of_questions} questions • {activeTimeSection.duration} min</div>
-                  </div>
+         <div className="flex justify-between items-center">
+  <div>
+    <div className="font-semibold">{activeTimeSection.name}</div>
+    <div className="text-[#CCCCCC] text-sm">
+      {activeTimeSection.no_of_questions} questions • {activeTimeSection.duration} min
+    </div>
+  </div>
 
-                  <div className="text-right">
-                    <div className="text-[#CCCCCC] text-xs">Section time remaining</div>
-                    <div className="text-[#4CA466] font-extrabold">{humanTime(sectionSecondsLeft)}</div>
-                  </div>
-                </div>
+  <div className="flex items-center gap-4">
+      {/* Advance Section beside section timer */}
+       {(() => {
+      const qCount = (activeTimeSection?.questions || []).length;
+      const hasNext = currentQuestionIndex + 1 < qCount;
+       const isCoding = activeTimeQuestionObj?.question_type === "coding";
+
+  // show header Next button ONLY for coding questions
+  if (!isCoding) {
+    return null;
+  }
+      return (
+        <button
+          onClick={handleNextInTimeSection}
+          disabled={!hasNext}
+          className={`px-3 py-2 rounded-md text-white transition ${hasNext ? 'bg-[#4CA466] hover:brightness-95' : 'bg-gray-600 cursor-not-allowed'}`}
+          title={hasNext ? "Next question in section" : "No next question in this section"}
+        >
+          Next
+        </button>
+      );
+    })()}
+    <button
+      onClick={() => {
+        showConfirm("Advance to next section? You will not be able to return.")
+          .then((ok) => {
+            if (ok) manualAdvanceSection();
+          });
+      }}
+className="px-3 py-2 rounded-md text-white bg-[#4CA466] hover:brightness-95 transition"
+    >
+      
+      Submit Section
+    </button>
+    <div className="text-right">
+      <div className="text-[#CCCCCC] text-xs">Section time remaining</div>
+      <div className="text-[#4CA466] font-extrabold">{humanTime(sectionSecondsLeft)}</div>
+    </div>
+ 
+  
+  </div>
+</div>
+
 
                 <hr className="border-t" style={{ borderColor: BORDER, margin: '12px 0' }} />
 
@@ -1454,6 +1670,7 @@ switch (it.type) {
                           ) ?? [])
                         }
                         onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
+                        headerHeight={HEADER_HEIGHT}
                       />
                     ) : (
                       (activeTimeQuestionObj?.options || []).map((opt) => (
@@ -1464,21 +1681,7 @@ switch (it.type) {
                     )}
                   </div>
 
-                  <div className="mt-4 flex gap-2">
-                 
-
-                    <button
-                      onClick={() => {
-                        showConfirm("Advance to next section? You will not be able to return.")
-                          .then((ok) => {
-                            if (ok) manualAdvanceSection();
-                          });
-                      }}
-                      className="px-3 py-2 rounded-md text-white bg-gray-700"
-                    >
-                      Advance Section
-                    </button>
-                  </div>
+                
                 </div>
               </div>
             )}
@@ -1489,22 +1692,52 @@ switch (it.type) {
                   Open sections — you can navigate freely between sections and questions.
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold">{activeOpenSection?.name ?? "Open Section"}</div>
-                    <div className="text-[#CCCCCC] text-sm">{activeOpenSection?.no_of_questions ?? 0} questions</div>
-                  </div>
-                </div>
+              <div className="flex justify-between items-center">
+  <div>
+    <div className="font-semibold">{activeOpenSection?.name ?? "Open Section"}</div>
+    <div className="text-[#CCCCCC] text-sm">{activeOpenSection?.no_of_questions ?? 0} questions</div>
+  </div>
+
+  <div className="flex items-center gap-3">
+    {/* NEXT button placed at top-right of section header */}
+    {activeOpenSection ? (() => {
+      const qCount = (activeOpenSection?.questions || []).length;
+      const secIndex = openSections.findIndex((s) => s.id === currentOpenSectionId);
+      const hasNextInSection = currentOpenQuestionIndex + 1 < qCount;
+      const hasNextSection = secIndex !== -1 && secIndex + 1 < (openSections || []).length;
+      const hasNext = hasNextInSection || hasNextSection;
+// show header Next button ONLY for coding questions
+  const isCoding = activeOpenQuestionObj?.question_type === "coding";
+  if (!isCoding) {
+    return null;
+  }
+      return (
+        <button
+          onClick={handleNextInOpenSection}
+          disabled={!hasNext}
+          className={`px-3 py-2 rounded-md text-white transition ${hasNext ? 'bg-[#4CA466] hover:brightness-95' : 'bg-gray-600 cursor-not-allowed'}`}
+          title={hasNext ? "Next question / next section" : "No next question or section — please submit"}
+        >
+          Next
+        </button>
+      );
+    })() : (
+      <button
+        disabled
+        className="px-3 py-2 rounded-md text-white bg-gray-600 cursor-not-allowed"
+        title="No open section"
+      >
+        Next
+      </button>
+    )}
+  </div>
+</div>
+
 
                 <hr className="border-t" style={{ borderColor: BORDER, margin: '12px 0' }} />
 
                 <div>
-                  <div className="text-white font-semibold">
-                    Q{currentOpenQuestionIndex + 1}. {activeOpenQuestionObj?.title ?? activeOpenQuestionObj?.question_text ?? "Question"}
-                  </div>
-                  <div className="text-[#CCCCCC] mt-2">
-                    {activeOpenQuestionObj?.question_text}
-                  </div>
+                  
 
                   <div className="mt-3">
                     {activeOpenQuestionObj?.question_type === "mcq" ? (
@@ -1543,6 +1776,7 @@ switch (it.type) {
                           ) ?? [])
                         }
                         onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
+                        headerHeight={HEADER_HEIGHT}
                       />
                     ) : (
                       (activeOpenQuestionObj?.options || []).map(opt => (
@@ -1586,9 +1820,13 @@ switch (it.type) {
               </button>
             </div>
           </div>
+          </section>
+
+
         </div>
 
-        {showEnterFsButton && !violationActive && (
+
+ {showEnterFsButton && !violationActive && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-50 text-white p-6 flex-col">
             <h2 className="mb-3 text-2xl">Please enter fullscreen to continue</h2>
             <p className="text-[#CCCCCC] max-w-xl text-center">
@@ -1615,6 +1853,11 @@ switch (it.type) {
             </button>
           </div>
         )}
+
+      </main>
+      
+
+       
       </div>
     );
   }

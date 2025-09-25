@@ -16,12 +16,16 @@ function CodeRunner({
   error,
   onSubmit,
   initialSubmissions = [],
+    headerHeight = 64, // <-- default header height in px (can be overridden by parent)
+
 }: {
   question: Question | null;
   loading?: boolean;
   error?: string | null;
   onSubmit: (submissionIds: string[]) => void;
   initialSubmissions?: string[];
+    headerHeight?: number;
+
 }) {
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionResult | null>(null);
@@ -38,6 +42,7 @@ function CodeRunner({
   const [submissionIds, setSubmissionIds] = useState<string[]>(
     (initialSubmissions || []).map(String)
   );
+const containerHeightCalc = `calc(100vh - ${headerHeight}px)`;
 
   // keep local submissionIds in sync when parent passes new initialSubmissions
   useEffect(() => {
@@ -47,6 +52,7 @@ function CodeRunner({
       if (JSON.stringify(prev) === JSON.stringify(incoming)) return prev;
       return incoming;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(initialSubmissions)]);
 
   // Initialize code with boilerplate and custom input with first sample
@@ -65,12 +71,13 @@ function CodeRunner({
       }
 
       if ((question as any).sample_io && (question as any).sample_io.length > 0) {
-        setCustomInput((question as any).sample_io[0].input_text);
+        setCustomInput((question as any).sample_io[0].input_text ?? "");
       }
     }
+    // only re-init when question.id changes
   }, [question?.id]);
 
-  // Update code when language changes
+  // Update code when language changes (but don't clobber if user typed and you prefer not to)
   useEffect(() => {
     if (
       question &&
@@ -79,8 +86,9 @@ function CodeRunner({
     ) {
       setCode((question as any).predefined_boilerplates[selectedLanguage]);
     } else {
-      setCode("");
+      // keep user's code if they already typed something — change to setCode("") if you want to reset
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLanguage, question?.id]);
 
   /* handleRunCode */
@@ -199,6 +207,7 @@ function CodeRunner({
     }
   };
 
+  // --- Early returns (loading / error / not found)
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -244,101 +253,57 @@ function CodeRunner({
     availableTabs.push("samples");
   }
 
+  // ---------------------------
+  // MAIN LAYOUT (fixed single h-screen)
+  // ---------------------------
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#1f1f1f" }}>
-      <div className="flex h-full">
-        {/* Left Panel - Problem Statement */}
-        <div
-          className="w-1/2 border-r h-screen border-gray-800 flex flex-col"
-          style={{ backgroundColor: "#1f1f1f" }}
+    // Top-level: single h-screen so inner children use h-full and flex to size properly
+  <div
+    className="flex"
+    style={{
+      height: containerHeightCalc,
+      minHeight: containerHeightCalc,
+      backgroundColor: "#1f1f1f",
+    }}
+  >
+      {/* Left Panel - Problem Statement */}
+      <div
+        className="w-1/2 flex flex-col h-full border-r border-gray-800"
+        style={{ backgroundColor: "#1f1f1f" }}
+      >
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex flex-col h-full"
         >
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="flex flex-col h-full"
+          <TabsList
+            className="flex-shrink-0  border-b border-gray-800"
+            style={{ backgroundColor: "#1f1f1f" }}
           >
-            <TabsList
-              className="flex-shrink-0 px-4 border-b border-gray-800"
-              style={{ backgroundColor: "#1f1f1f" }}
-            >
-              <TabsTrigger
-                value="problem"
-                className="text-gray-300 hover:text-gray-100 data-[state=active]:text-white"
-                style={{
-                  backgroundColor:
-                    activeTab === "problem" ? "#2f2f2f" : "transparent",
-                }}
-              >
-                Problem
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="submissions"
-                className="text-gray-300 hover:text-gray-100 data-[state=active]:text-white"
-                style={{
-                  backgroundColor:
-                    activeTab === "submissions" ? "#2f2f2f" : "transparent",
-                }}
-              >
-                Submissions
-              </TabsTrigger>
-            </TabsList>
-
-            <div
-              className="flex-1 overflow-y-auto custom-scrollbar"
+            <TabsTrigger
+              value="problem"
+              className="text-gray-300 hover:text-gray-100 data-[state=active]:text-white"
               style={{
-                backgroundColor: "#1f1f1f",
-                scrollbarWidth: "thin",
-                scrollbarColor: "#4a4a4a #1f1f1f",
+                backgroundColor:
+                  activeTab === "problem" ? "#2f2f2f" : "transparent",
               }}
             >
-              <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                  width: 8px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                  background: #1f1f1f;
-                  border-radius: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                  background: #4a4a4a;
-                  border-radius: 4px;
-                  border: 1px solid #1f1f1f;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                  background: #5a5a5a;
-                }
-                .custom-scrollbar::-webkit-scrollbar-corner {
-                  background: #1f1f1f;
-                }
-              `}</style>
-              <TabsContent
-                value="problem"
-                style={{ backgroundColor: "#1f1f1f" }}
-              >
-                <ProblemStatement question={question} />
-              </TabsContent>
+              Problem
+            </TabsTrigger>
 
-              <TabsContent
-                value="submissions"
-                style={{ backgroundColor: "#1f1f1f" }}
-              >
-                {/* Pass the live submissionIds so SubmissionsTabs reloads immediately */}
-                <SubmissionsTabs
-                  collection="questions"
-                  questionId={question.id}
-                  submissionIds={submissionIds}
-                />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
+            <TabsTrigger
+              value="submissions"
+              className="text-gray-300 hover:text-gray-100 data-[state=active]:text-white"
+              style={{
+                backgroundColor:
+                  activeTab === "submissions" ? "#2f2f2f" : "transparent",
+              }}
+            >
+              Submissions
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Right Panel - Code Editor */}
-        <div
-          className="w-1/2 flex flex-col h-screen"
-          style={{ backgroundColor: "#1f1f1f" }}
-        >
+          {/* Content area: flex-1 + independent scroll */}
           <div
             className="flex-1 overflow-y-auto custom-scrollbar"
             style={{
@@ -347,30 +312,74 @@ function CodeRunner({
               scrollbarColor: "#4a4a4a #1f1f1f",
             }}
           >
-            <CodeEditor
-              question={question}
-              selectedLanguage={selectedLanguage}
-              onLanguageChange={setSelectedLanguage}
-              code={code}
-              onCodeChange={setCode}
-              customInput={customInput}
-              onCustomInputChange={setCustomInput}
-              output={output}
-              isRunning={isRunning}
-              onRunCode={handleRunCode}
-              onSubmitCode={handleSubmitCode}
-            />
+            <style jsx>{`
+              .custom-scrollbar::-webkit-scrollbar {
+                width: 8px;
+              }
+              .custom-scrollbar::-webkit-scrollbar-track {
+                background: #1f1f1f;
+                border-radius: 4px;
+              }
+              .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #4a4a4a;
+                border-radius: 4px;
+                border: 1px solid #1f1f1f;
+              }
+              .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #5a5a5a;
+              }
+              .custom-scrollbar::-webkit-scrollbar-corner {
+                background: #1f1f1f;
+              }
+            `}</style>
 
-            {/* Result panel placed under the editor */}
-            <div
-              className="flex-shrink-0 p-4 border-t border-gray-800"
-              style={{ backgroundColor: "#1f1f1f" }}
-            >
-              <ResultPanel result={submissionResult} />
-            </div>
+            <TabsContent value="problem" className="p-4">
+              <ProblemStatement question={question} />
+            </TabsContent>
+
+            <TabsContent value="submissions" className="p-4">
+              <SubmissionsTabs
+                collection="questions"
+                questionId={question.id}
+                submissionIds={submissionIds}
+              />
+            </TabsContent>
           </div>
+        </Tabs>
+      </div>
+
+      {/* Right Panel - Code Editor */}
+    <div className="w-1/2 flex flex-col h-full min-h-0" style={{ backgroundColor: "#1f1f1f" }}>
+      {/* Editor + Output/result area: flex-1 column, editor scrolls, result sticks to bottom */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto p-4"
+          style={{
+            backgroundColor: "#1f1f1f",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#4a4a4a #1f1f1f",
+          }}
+        >
+          <CodeEditor
+            question={question}
+            selectedLanguage={selectedLanguage}
+            onLanguageChange={setSelectedLanguage}
+            code={code}
+            onCodeChange={setCode}
+            customInput={customInput}
+            onCustomInputChange={setCustomInput}
+            output={output}
+            isRunning={isRunning}
+            onRunCode={handleRunCode}
+            onSubmitCode={handleSubmitCode}
+          />
+        </div>
+        {/* Result panel placed below editor, non-scrolling (stays visible) */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-800">
+          <ResultPanel result={submissionResult} />
         </div>
       </div>
+    </div>
     </div>
   );
 }
