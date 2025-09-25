@@ -2,7 +2,7 @@
 // - supports question.items (item_id) and question.options (option_id)
 // - reads question.is_drag_and_drop to decide drag vs up/down (but you can override via prop)
 import React, { useEffect, useState, useRef } from "react";
-
+import MarkdownRenderer from "../../utils/MarkDownRender";
 export default function RearrangeQuestion({
   question,
   onSolved = () => {},
@@ -149,10 +149,10 @@ const moveDown = (idx) => {
   return (
     <div className="bg-white/5 border rounded-lg p-4" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
       <div className="mb-3">
-        <div className="font-semibold text-white">{question?.title ?? "Arrange the following"}</div>
         {question?.prompt && (
-          <div className="text-sm text-gray-300 mt-1 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: String(question.prompt) }} />
+                  <MarkdownRenderer className="markdown-dark" text={question?.prompt|| ""} />
         )}
+        
       </div>
 
       <div className="space-y-2">
@@ -171,10 +171,10 @@ const moveDown = (idx) => {
                 cursor: resolvedIsDrag && !disabled ? "grab" : "default",
               }}
             >
-              <div className="w-6 text-sm text-gray-300">{idx + 1}.</div>
 
               <div className="flex-1 text-sm text-gray-100">
-                <div dangerouslySetInnerHTML={{ __html: opt.html || "" }} />
+                                  <MarkdownRenderer className="markdown-dark" text={opt.html|| ""} />
+
                 {opt.images?.length > 0 && (
                   <div className="mt-2 flex gap-2 flex-wrap">
                     {opt.images.map((img, i) => (
@@ -199,18 +199,21 @@ const moveDown = (idx) => {
         {resolvedIsDrag ? "Drag and drop to reorder." : "Use the ▲ ▼ buttons to reorder."} Click <strong>Save & Continue</strong> to persist.
       </div>
 
-      <div className="mt-3 flex gap-2">
-        <button onClick={handleSave} disabled={disabled} className={`px-3 py-2 rounded-md text-white ${disabled ? "bg-gray-600" : "bg-[#4CA466]"}`}>
-          Save & Continue
-        </button>
-
-        <button onClick={handleClear} disabled={disabled} className="px-3 py-2 rounded-md text-white bg-gray-700">
+      <div className="mt-3 flex gap-2 justify-end">
+          <button onClick={handleClear} disabled={disabled} className="px-3 py-2 rounded-md text-white bg-gray-700">
           Clear
         </button>
-
-        <button onClick={handleNextNoSave} disabled={disabled} className="px-3 py-2 rounded-md text-white bg-blue-600">
-          Next (No Save)
+       <button onClick={handleNextNoSave} disabled={disabled} className="px-3 py-2 rounded-md text-white bg-blue-600">
+          Next 
         </button>
+         <button onClick={handleSave} disabled={disabled} className={`px-3 py-2 rounded-md text-white ${disabled ? "bg-gray-600" : "bg-[#4CA466]"}`}>
+          Save & Continue
+        </button>
+  
+      
+
+     
+       
       </div>
     </div>
   );

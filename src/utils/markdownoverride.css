@@ -32,3 +32,9 @@
 .markdown-dark a {
   color: #9ecbff !important; /* links light blue */
 }
+/* src/styles/markdown-overrides.css */
+.markdown-dark pre,
+.markdown-dark code {
+  color: #fff !important;
+}
+

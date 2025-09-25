@@ -7,7 +7,15 @@ import RearrangeQuestion from "./RearrangeQuestion";
 import CodeRunner from "../CodeRunner";
 import { useModal } from "../../utils/ModalUtils";
 import InstructionsPanel from "./InstructionPanel";
-const DEV_MODE = true;
+const DEV_MODE = false;
+
+// small, reusable loading spinner (tailwind)
+const LoadingSpinner = ({ label = "Loading..." }) => (
+  <div className="flex items-center justify-center flex-col gap-3 p-6">
+    <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin" />
+    <div className="text-[#CCCCCC] text-sm">{label}</div>
+  </div>
+);
 
 /* Design tokens kept for reference (Tailwind used in markup) */
 const PRIMARY = "#4CA466";
@@ -21,32 +29,35 @@ function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 
-/* ... (INSTRUCTIONS remain unchanged) ... */
+/* Local fallback instructions (used if fetch fails) */
 const INSTRUCTIONS = [
   {
     id: "ins-1",
     title: "Instruction 1",
     content:
       "Read these instructions carefully. This test is timed. Make sure you are seated in a distraction-free environment.",
+    format: "text",
   },
   {
     id: "ins-2",
     title: "Instruction 2",
     content:
       "Do not refresh the page or switch tabs during the test. If you leave fullscreen, you will receive a warning and the test may end.",
+    format: "text",
   },
   {
     id: "ins-3",
     title: "Instruction 3",
     content:
       "Keep your device charged and stable. Autosave will happen every few seconds. When you start the test, it will begin immediately.",
+    format: "text",
   },
 ];
 
 // ---- FIXED: all durations are in seconds ----
-const INSTRUCTION_TOTAL_SECONDS = 2; // 2 minutes (seconds)
-const VIOLATION_SECONDS = 30; // 30 seconds out-of-fullscreen before auto-submit
-const MAX_TAB_SWITCHES = 5;
+const INSTRUCTION_TOTAL_SECONDS = 2; // 2 minutes (seconds) — adjust as needed
+const VIOLATION_SECONDS = 30000; // 30 seconds out-of-fullscreen before auto-submit
+const MAX_TAB_SWITCHES = 500;
 const TAB_EVENT_DEDUP_MS = 1000; // dedupe visibility/blur events within 1s
 
 const Attempt = () => {
@@ -68,6 +79,7 @@ const Attempt = () => {
   const tabSwitchCountRef = useRef(0);
 
   const ATTEMPT_FETCH_URL = (testId) => `/api/students/test/attempt/${testId}`;
+  const INSTRUCTIONS_FETCH_URL = (testId) => `/api/students/test/instructions/${testId}`;
 
   // instruction timer
   const [insSeconds, setInsSeconds] = useState(INSTRUCTION_TOTAL_SECONDS);
@@ -79,8 +91,15 @@ const Attempt = () => {
   const [showEnterFsButton, setShowEnterFsButton] = useState(false);
   const [isBlockedForFs, setIsBlockedForFs] = useState(false);
 
+  // NEW: server-fetched instructions state & loading
+  const [serverInstructions, setServerInstructions] = useState(null);
+  const [instructionsLoading, setInstructionsLoading] = useState(false);
+  const [instructionsError, setInstructionsError] = useState(null);
+
   // test payload & global timer
   const [payload, setPayload] = useState(null);
+  const [payloadLoading, setPayloadLoading] = useState(false); // <- NEW
+
   const [secondsLeft, setSecondsLeft] = useState(null);
   const testTimerRef = useRef(null);
   const payloadRef = useRef(null);
@@ -119,12 +138,91 @@ const Attempt = () => {
     tabSwitchCountRef.current = tabSwitchCount;
   }, [tabSwitchCount]);
 
+  // ---------- Fetch instructions from server ----------
+  const fetchInstructions = async () => {
+    // if (DEV_MODE) {
+    //   // in dev mode, keep local INSTRUCTIONS
+    //   setServerInstructions(null);
+    //   setInstructionsLoading(false);
+    //   setInstructionsError(null);
+    //   return;
+    // }
+
+    setInstructionsLoading(true);
+    setInstructionsError(null);
+    try {
+      const resp = await privateAxios.get(INSTRUCTIONS_FETCH_URL(testId));
+      const data = resp?.data;
+      if (!data || !data.success) {
+        throw new Error(data?.message || "Failed to fetch instructions");
+      }
+      // server returns data.data.instructions (per backend route we used)
+      const instrs = data?.data?.instructions ?? data?.instructions ?? [];
+
+      // Map server instruction items into the panel-friendly shape:
+      // { id, title, content, format } - InstructionsPanel should accept this.
+      const mapped = instrs.map((it, idx) => {
+        // server items may be { type: 'general'|'test'|'sections', content: ..., format: 'html'|'text'|'json' }
+        const id = it.id ?? `srv-${it.type ?? idx}-${idx}`;
+       let title;
+switch (it.type) {
+  case "general":
+    title = "General Instructions";
+    break;
+  case "test":
+    title = "Test Instructions";
+    break;
+  case "sections":
+    title = "Section Instructions";
+    break;
+  default:
+    title = it.title ?? `Instruction ${idx + 1}`;
+}
+
+        let content = it.content;
+        // if the server provided a JSON block for sections (content is object), stringify into readable text or keep object for panel
+        if (it.format === "json" && typeof content === "object") {
+          // keep object as-is — InstructionsPanel may render it specially. Also provide a fallback textual summary:
+          content = content;
+        } else if (it.format === "html" && typeof content === "string") {
+          // keep the HTML string
+          content = content;
+        } else if (typeof content !== "string") {
+          // fallback stringify
+          content = JSON.stringify(content);
+        }
+
+        return {
+          id,
+          title,
+          content,
+          format: it.format ?? "text",
+        };
+      });
+
+      setServerInstructions(mapped);
+      setInstructionsLoading(false);
+    } catch (err) {
+      console.error("[fetchInstructions] failed:", err);
+      setInstructionsError(err.message || "Failed to fetch instructions");
+      setInstructionsLoading(false);
+      setServerInstructions(null); // fallback to local INSTRUCTIONS
+    }
+  };
+
+  // fetch instructions once when component mounts or testId changes
+  useEffect(() => {
+    if (!testId) return;
+    fetchInstructions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testId]);
+
   // ---------- API helpers ----------
   const reportTabSwitch = async ({ testId, answers }) => {
-      if (DEV_MODE) {
-    console.log("[DEV_MODE] reportTabSwitch skipped", { testId, answers });
-    return null;
-  }
+    if (DEV_MODE) {
+      console.log("[DEV_MODE] reportTabSwitch skipped", { testId, answers });
+      return null;
+    }
     try {
       const body = { test_id: testId, answers: answers || {} };
       const resp = await privateAxios.post("/api/students/test/tab-switch", body);
@@ -136,10 +234,10 @@ const Attempt = () => {
   };
 
   const reportFullscreenViolation = async ({ testId, answers }) => {
-     if (DEV_MODE) {
-    console.log("[DEV_MODE] reportFullscreenViolation skipped", { testId, answers });
-    return null;
-  }
+    if (DEV_MODE) {
+      console.log("[DEV_MODE] reportFullscreenViolation skipped", { testId, answers });
+      return null;
+    }
     try {
       const body = { test_id: testId, answers: answers || {} };
       const resp = await privateAxios.post("/api/students/test/fullscreen-violation", body);
@@ -235,10 +333,10 @@ const Attempt = () => {
 
   // ---------- Tab-switch / visibility tracking (deduped) ----------
   useEffect(() => {
-      if (DEV_MODE) {
-    console.log("[DEV_MODE] skipping tab/visibility listeners");
-    return;
-  }
+    if (DEV_MODE) {
+      console.log("[DEV_MODE] skipping tab/visibility listeners");
+      return;
+    }
     const now = () => new Date().getTime();
 
     const handleTabEvent = (ev) => {
@@ -331,11 +429,11 @@ const Attempt = () => {
   // ---------- try auto fullscreen on mount ----------
   useEffect(() => {
     if (DEV_MODE) {
-    setFullscreenGranted(true); // pretend we have fullscreen in dev
-    setShowEnterFsButton(false);
-    setIsBlockedForFs(false);
-    return;
-  }
+      setFullscreenGranted(true); // pretend we have fullscreen in dev
+      setShowEnterFsButton(false);
+      setIsBlockedForFs(false);
+      return;
+    }
     const tryFs = async () => {
       try {
         if (document.documentElement.requestFullscreen) {
@@ -362,10 +460,10 @@ const Attempt = () => {
 
   // ---------- fullscreen change listener ----------
   useEffect(() => {
-     if (DEV_MODE) {
-    console.log("[DEV_MODE] skipping fullscreenchange listener");
-    return;
-  }
+    if (DEV_MODE) {
+      console.log("[DEV_MODE] skipping fullscreenchange listener");
+      return;
+    }
     const onFsChange = () => {
       const isFs = !!document.fullscreenElement;
       if (!isFs) {
@@ -444,6 +542,8 @@ const Attempt = () => {
   // ---------- Start test: fetch payload and initialize section timers ----------
   const startTestPhase = async () => {
     setPhase("test");
+      setPayloadLoading(true); // <- indicate we are loading attempt payload
+
     try {
       const resp = await privateAxios.get(ATTEMPT_FETCH_URL(testId));
       if (!resp?.data?.success) throw new Error(resp?.data?.message || "Failed to fetch attempt");
@@ -550,7 +650,12 @@ const Attempt = () => {
 
     } catch (err) {
       console.error("Failed to fetch test payload:", err);
+
       setPayload({ _error: err.message || "Failed to fetch test" });
+    }
+    finally{
+              setPayloadLoading(false); // <- indicate we are loading attempt payload
+
     }
   };
 
@@ -1143,10 +1248,10 @@ const Attempt = () => {
 
   // ---------- Violation helpers ----------
   const startViolationCountdown = () => {
-      if (DEV_MODE) {
-    console.log("[DEV_MODE] startViolationCountdown skipped");
-    return;
-  }
+    if (DEV_MODE) {
+      console.log("[DEV_MODE] startViolationCountdown skipped");
+      return;
+    }
     if (violationTimerRef.current) return; // already running
     setViolationActive(true);
     setViolationCountdown(VIOLATION_SECONDS);
@@ -1211,16 +1316,24 @@ const Attempt = () => {
 
   // ------------------ Render -----------------
   if (phase === "instructions") {
+    // Decide which instructions to show:
+    // Prefer serverInstructions (if present), else fallback to local INSTRUCTIONS.
+    const instructionsToShow = serverInstructions ?? INSTRUCTIONS;
+
+    // Optionally, you could pass loading/error to InstructionPanel so it can show spinner/message
     return (
-     <InstructionsPanel 
-     instructions={INSTRUCTIONS}
-     seconds={insSeconds}
-     onStart={startTestPhase}
-     enterFullscreen={enterFullscreenOnClick}
-     isBlockedForFs={isBlockedForFs}
-     showEnterFsButton={showEnterFsButton}
-     humanTime={humanTime}
-     />
+      <InstructionsPanel
+        instructions={instructionsToShow}
+        seconds={insSeconds}
+        onStart={startTestPhase}
+        enterFullscreen={enterFullscreenOnClick}
+        isBlockedForFs={isBlockedForFs}
+        showEnterFsButton={showEnterFsButton}
+        humanTime={humanTime}
+        // optional props so panel can show loading / error
+        loading={instructionsLoading}
+        error={instructionsError}
+      />
     );
   }
 
@@ -1235,9 +1348,21 @@ const Attempt = () => {
         </div>
       );
     }
+    if (payloadLoading ) {
+  // show a full-screen or inline loading state while payload is being fetched/initialized
+  return (
+    <div className="min-h-screen bg-[#1E1E1E] text-white flex items-center justify-center p-6">
+      <div className="max-w-2xl w-full">
+        <div className="bg-[#2D2D30] rounded-lg p-6 border" style={{ borderColor: BORDER }}>
+          <LoadingSpinner label="Preparing your test — please wait…" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
     const testName = payload?.data?.test?.test_name ?? payload?.test_name ?? payload?.test?.test_name ?? "Test Attempt";
-    const instructionsText = payload?.data?.test?.instructions ?? payload?.instructions ?? payload?.test?.instructions ?? "";
 
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     const activeTimeQuestionObj = getQuestionObj(activeTimeSection?.questions?.[currentQuestionIndex]);
@@ -1250,7 +1375,6 @@ const Attempt = () => {
         <div className="flex justify-between mb-5">
           <div>
             <h2 className="m-0 text-xl">{testName}</h2>
-            <p className="text-[#CCCCCC] mt-1">{instructionsText}</p>
           </div>
           <div className="text-right">
             <div className="text-[#CCCCCC] text-sm">Time Remaining</div>
@@ -1289,16 +1413,13 @@ const Attempt = () => {
                 <hr className="border-t" style={{ borderColor: BORDER, margin: '12px 0' }} />
 
                 <div>
-                  <div className="text-white font-semibold">
-                    Q{currentQuestionIndex + 1}. {activeTimeQuestionObj?.title ?? activeTimeQuestionObj?.question_text ?? "Question"}
-                  </div>
-                  <div className="text-[#CCCCCC] mt-2">
-                    {activeTimeQuestionObj?.question_text}
-                  </div>
-
+                
+              
                   <div className="mt-3">
                     {activeTimeQuestionObj?.question_type === "mcq" ? (
                       <MCQQuestion
+                      index={currentQuestionIndex+1}
+                      
                         question={activeTimeQuestionObj}
                         onSolved={handleMcqSolvedInTimeSection}
                         onClear={handleMcqClearInTimeSection}
@@ -1344,26 +1465,7 @@ const Attempt = () => {
                   </div>
 
                   <div className="mt-4 flex gap-2">
-                    {activeTimeQuestionObj?.question_type !== "mcq" && (
-                      <button
-                        onClick={() => {
-                          const qObj = getQuestionObj(activeTimeSection?.questions?.[currentQuestionIndex]);
-                          const qId = qObj?.id ?? activeTimeSection?.questions?.[currentQuestionIndex]?.id;
-                          if (qId) markQuestionSolved(activeTimeSection.id, qId);
-
-                          const nxt = currentQuestionIndex + 1;
-                          if (nxt < (activeTimeSection.questions || []).length) {
-                            setCurrentQuestionIndex(nxt);
-                          } else {
-                            showAlert("End of section questions. You can Advance Section or wait for timer to auto-advance.");
-                          }
-                        }}
-                        className="px-3 py-2 rounded-md text-white"
-                        style={{ background: PRIMARY }}
-                      >
-                        Mark Solved & Next Q
-                      </button>
-                    )}
+                 
 
                     <button
                       onClick={() => {
@@ -1472,17 +1574,7 @@ const Attempt = () => {
             )}
 
             <div className="mt-3 flex gap-2">
-              <button
-                onClick={() => {
-                  console.log("[Manual Save] testId:", testId);
-                  console.log("Payload snapshot:", payload);
-                  showAlert("Saved (console.log)");
-                }}
-                className="px-3 py-2 rounded-md text-white"
-                style={{ background: PRIMARY }}
-              >
-                Save
-              </button>
+           
 
               <button
                 onClick={handleSubmitTest}
@@ -1539,4 +1631,3 @@ const Attempt = () => {
 };
 
 export default Attempt;
-1

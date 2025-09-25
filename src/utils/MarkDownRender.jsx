@@ -42,7 +42,7 @@ export default function MarkdownRenderer({ text, className = "", containerProps 
 
   // Sanitize HTML to protect from XSS
   const sanitized = React.useMemo(() => DOMPurify.sanitize(rawHtml), [rawHtml]);
-
+// print(sanitized)
   return (
     <div
       {...containerProps}

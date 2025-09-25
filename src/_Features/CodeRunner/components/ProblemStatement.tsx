@@ -26,6 +26,7 @@ export default function ProblemStatement({ question }: ProblemStatementProps) {
       console.error('Failed to copy text: ', err);
     }
   };
+  console.log("question", question)
 
   return (
     <div className="p-6 text-gray-100" style={{ backgroundColor: '#1f1f1f' }}>
