@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { privateAxios } from "../../utils/axios"; // adjust path if needed
 import AttemptSidebar from "./AttemptSidebar";
-import MCQQuestion from "./MCQQuestion"; // NEW: MCQ component
-// import { useModal } from "../../utils/ModalUtils";
+import MCQQuestion from "./MCQQuestion";
 import RearrangeQuestion from "./RearrangeQuestion";
 import CodeRunner from "../CodeRunner";
 import { useModal } from "../../utils/ModalUtils";
+import InstructionsPanel from "./InstructionPanel";
+const DEV_MODE = true;
 
 /* Design tokens kept for reference (Tailwind used in markup) */
 const PRIMARY = "#4CA466";
@@ -20,7 +21,7 @@ function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 
-/* ... (INSTRUCTIONS, constants remain unchanged) ... */
+/* ... (INSTRUCTIONS remain unchanged) ... */
 const INSTRUCTIONS = [
   {
     id: "ins-1",
@@ -42,140 +43,67 @@ const INSTRUCTIONS = [
   },
 ];
 
-const INSTRUCTION_TOTAL_SECONDS = 2; // 2 minutes (fixing original 2 -> seconds)
-const VIOLATION_SECONDS = 3000; // kept smaller than original 3000; you can set back to 3000 if you want long grace
-// --- Add near other state/refs at top of component ---
+// ---- FIXED: all durations are in seconds ----
+const INSTRUCTION_TOTAL_SECONDS = 2; // 2 minutes (seconds)
+const VIOLATION_SECONDS = 30; // 30 seconds out-of-fullscreen before auto-submit
 const MAX_TAB_SWITCHES = 5;
+const TAB_EVENT_DEDUP_MS = 1000; // dedupe visibility/blur events within 1s
+
 const Attempt = () => {
   const query = useQuery();
   const testId = query.get("testId");
-const [submissionIdsByQuestion, setSubmissionIdsByQuestion] = useState({});
-const [attemptSubmitted, setAttemptSubmitted] = useState(false);
-const attemptSubmittedRef = useRef(false);
-useEffect(() => { attemptSubmittedRef.current = attemptSubmitted; }, [attemptSubmitted]);
 
-  // phase: 'instructions' | 'test' | 'ended'
+  const [submissionIdsByQuestion, setSubmissionIdsByQuestion] = useState({});
+  const [attemptSubmitted, setAttemptSubmitted] = useState(false);
+  const attemptSubmittedRef = useRef(false);
+  useEffect(() => {
+    attemptSubmittedRef.current = attemptSubmitted;
+  }, [attemptSubmitted]);
+
   const [phase, setPhase] = useState("instructions");
-// at top of component
-// near top of component, with other state
-const [isSubmitting, setIsSubmitting] = useState(false);
-const [submittedResult, setSubmittedResult] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedResult, setSubmittedResult] = useState(null);
 
-const [tabSwitchCount, setTabSwitchCount] = useState(0);
-const tabSwitchCountRef = useRef(0);
-const ATTEMPT_FETCH_URL = (testId) => `/api/students/test/attempt/${testId}`;
-useEffect(() => { tabSwitchCountRef.current = tabSwitchCount; }, [tabSwitchCount]);
-// --- Tab-switch / visibility tracking and enforcement ---
-useEffect(() => {
-  const onVisibility = () => {
-    if (document.hidden) {
-      // increment count whenever page becomes hidden (tab switch or minimize)
-      setTabSwitchCount((prev) => {
-        const next = prev + 1;
-        // If threshold exceeded AND currently not in fullscreen, then report + auto-submit
-        // Use the ref for current fullscreen state to avoid stale closure issues
-        const isFs = !!document.fullscreenElement;
-        // Only trigger when not fullscreen
-        if (next > MAX_TAB_SWITCHES && !isFs) {
-          // guard against double triggers
-          if (!attemptSubmittedRef.current) {
-            // send violation record to server (best-effort) and auto-submit
-          
-            // set violation UI state for user feedback (optional)
-            setViolationActive(true);
-            setViolationCountdown(5); // give tiny countdown so overlay shows briefly while submit proceeds
-            // auto-submit immediately
-            submitTestDirect();
-          }
-        }
-        return next;
-      });
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const tabSwitchCountRef = useRef(0);
 
-      // also treat visibility change as leaving fullscreen if that is the case (you already do this elsewhere)
-      if (phase === "instructions") {
-        setIsBlockedForFs(true);
-        setShowEnterFsButton(true);
-        setFullscreenGranted(false);
-      } else if (phase === "test" && fullscreenGranted) {
-        startViolationCountdown();
-      }
-    } else {
-      // page became visible again: clear violation countdown if any
-      clearViolationCountdown();
-    }
-  };
+  const ATTEMPT_FETCH_URL = (testId) => `/api/students/test/attempt/${testId}`;
 
-  // Also listen for blur (some browsers/firewalls may not toggle document.hidden reliably)
-  const onBlur = () => {
-    setTabSwitchCount((prev) => {
-      const next = prev + 1;
-      if (next > MAX_TAB_SWITCHES && !document.fullscreenElement) {
-        if (!attemptSubmittedRef.current) {
-          reportViolation({
-            type: "excessive-tab-switch",
-            details: { tab_switches: next, message: "Window lost focus too many times and is not in fullscreen." },
-          });
-          setViolationActive(true);
-          setViolationCountdown(5);
-          submitTestDirect();
-        }
-      }
-      return next;
-    });
-  };
-
-  document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("blur", onBlur);
-
-  return () => {
-    document.removeEventListener("visibilitychange", onVisibility);
-    window.removeEventListener("blur", onBlur);
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [phase, fullscreenGranted, testId, payload]);
-
-// track whether attempt is submitted so autosave/intervals stop
-
-  // single instruction timer
+  // instruction timer
   const [insSeconds, setInsSeconds] = useState(INSTRUCTION_TOTAL_SECONDS);
   const insTimerRef = useRef(null);
   const { showAlert, showConfirm } = useModal();
 
-  // fullscreen requirement state
+  // fullscreen state
   const [fullscreenGranted, setFullscreenGranted] = useState(false);
   const [showEnterFsButton, setShowEnterFsButton] = useState(false);
-  const [isBlockedForFs, setIsBlockedForFs] = useState(false); // overlay active when not fullscreen during instructions
+  const [isBlockedForFs, setIsBlockedForFs] = useState(false);
 
-  // test payload & global timer (total time left; kept for compatibility)
+  // test payload & global timer
   const [payload, setPayload] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(null);
   const testTimerRef = useRef(null);
-  // keep a ref to the latest payload so intervals/closures can read fresh data
-const payloadRef = useRef(null);
+  const payloadRef = useRef(null);
+  useEffect(() => {
+    payloadRef.current = payload;
+  }, [payload]);
 
-// ensure ref is always synced with state
-useEffect(() => {
-  payloadRef.current = payload;
-}, [payload]);
-
-
-  // ---------- NEW: time-restricted section management ----------
-  const [timeSections, setTimeSections] = useState([]); // array of sections with __durationSeconds meta
+  // time-restricted sections
+  const [timeSections, setTimeSections] = useState([]);
   const [currentTimeSectionIndex, setCurrentTimeSectionIndex] = useState(0);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // index inside active section
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sectionSecondsLeft, setSectionSecondsLeft] = useState(null);
   const sectionTimerRef = useRef(null);
   const [completedSections, setCompletedSections] = useState(new Set());
-  // questionStates keyed by sectionId -> questionId -> { viewed, solved }
-  const [questionStates, setQuestionStates] = useState({}); // { [sectionId]: { [qId]: { viewed, solved } } }
+  const [questionStates, setQuestionStates] = useState({});
 
-  // open sections (kept after finishing time sections)
+  // open sections
   const [openSections, setOpenSections] = useState([]);
-  const [openModeActive, setOpenModeActive] = useState(false); // when true, show open sections in sidebar
+  const [openModeActive, setOpenModeActive] = useState(false);
   const [currentOpenSectionId, setCurrentOpenSectionId] = useState(null);
   const [currentOpenQuestionIndex, setCurrentOpenQuestionIndex] = useState(0);
 
-  // violation handling (after test started)
+  // violation handling
   const [violationActive, setViolationActive] = useState(false);
   const [violationCountdown, setViolationCountdown] = useState(VIOLATION_SECONDS);
   const violationTimerRef = useRef(null);
@@ -183,20 +111,204 @@ useEffect(() => {
   // autosave
   const autosaveRef = useRef(null);
 
-  // ---------- instruction timer: runs only while phase === 'instructions' and fullscreen is active ----------
+  // dedupe and previous hidden state refs for tab-switch handling
+  const prevHiddenRef = useRef(false);
+  const lastTabEventAtRef = useRef(0);
+
+  useEffect(() => {
+    tabSwitchCountRef.current = tabSwitchCount;
+  }, [tabSwitchCount]);
+
+  // ---------- API helpers ----------
+  const reportTabSwitch = async ({ testId, answers }) => {
+      if (DEV_MODE) {
+    console.log("[DEV_MODE] reportTabSwitch skipped", { testId, answers });
+    return null;
+  }
+    try {
+      const body = { test_id: testId, answers: answers || {} };
+      const resp = await privateAxios.post("/api/students/test/tab-switch", body);
+      return resp?.data ?? null;
+    } catch (err) {
+      console.error("[reportTabSwitch] failed:", err);
+      return null;
+    }
+  };
+
+  const reportFullscreenViolation = async ({ testId, answers }) => {
+     if (DEV_MODE) {
+    console.log("[DEV_MODE] reportFullscreenViolation skipped", { testId, answers });
+    return null;
+  }
+    try {
+      const body = { test_id: testId, answers: answers || {} };
+      const resp = await privateAxios.post("/api/students/test/fullscreen-violation", body);
+      return resp?.data ?? null;
+    } catch (err) {
+      console.error("[reportFullscreenViolation] failed:", err);
+      return null;
+    }
+  };
+
+  const handleServerAutoSubmit = (respData) => {
+    const data = respData?.data ?? respData ?? {};
+    const wasSubmitted = !!(data.auto_submitted || data.submitted);
+    if (!wasSubmitted) return false;
+
+    attemptSubmittedRef.current = true;
+    setAttemptSubmitted(true);
+    setPhase("ended");
+    setSubmittedResult(data);
+
+    // Inform user and try to close
+    showConfirm("Your test was submitted automatically due to a proctoring violation.").then(() => {
+      try {
+        window.close();
+      } catch (e) {}
+    }).catch(() => {
+      try {
+        window.close();
+      } catch (e) {}
+    });
+
+    return true;
+  };
+
+  useEffect(() => {
+    if (attemptSubmitted) {
+      if (autosaveRef.current) {
+        clearInterval(autosaveRef.current);
+        autosaveRef.current = null;
+        console.log("[Autosave] stopped due to submission");
+      }
+    }
+  }, [attemptSubmitted]);
+
+  const submitTestDirect = async () => {
+    try {
+      if (attemptSubmittedRef.current) {
+        console.log("[SubmitDirect] already submitted, skipping");
+        return;
+      }
+      attemptSubmittedRef.current = true;
+      setAttemptSubmitted(true);
+      setIsSubmitting(true);
+
+      if (autosaveRef.current) {
+        clearInterval(autosaveRef.current);
+        autosaveRef.current = null;
+        console.log("[Autosave] stopped due to direct submission");
+      }
+
+      const resp = await privateAxios.post("/api/students/test/submit", {
+        test_id: testId,
+        answers: payload?.answers || {},
+      });
+
+      if (resp?.data?.success) {
+        setSubmittedResult(resp.data.data ?? resp.data);
+        setPhase("ended");
+
+        showConfirm("Test submitted successfully!")
+          .then((ok) => {
+            try {
+              if (ok) window.close();
+            } catch (e) {}
+          })
+          .catch(() => {
+            try { window.close(); } catch (e) {}
+          });
+      } else {
+        attemptSubmittedRef.current = false;
+        setAttemptSubmitted(false);
+        showConfirm(resp?.data?.message || "Auto-submission failed.");
+      }
+    } catch (err) {
+      console.error("[submitTestDirect] failed:", err);
+      attemptSubmittedRef.current = false;
+      setAttemptSubmitted(false);
+      showConfirm("Error auto-submitting test. Please try to submit manually.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ---------- Tab-switch / visibility tracking (deduped) ----------
+  useEffect(() => {
+      if (DEV_MODE) {
+    console.log("[DEV_MODE] skipping tab/visibility listeners");
+    return;
+  }
+    const now = () => new Date().getTime();
+
+    const handleTabEvent = (ev) => {
+      // dedupe multiple events that may fire on same action (visibilitychange + blur)
+      const last = lastTabEventAtRef.current || 0;
+      if (now() - last < TAB_EVENT_DEDUP_MS) {
+        return;
+      }
+      lastTabEventAtRef.current = now();
+
+      // Determine if this is a transition visible -> hidden or blur
+      const isHidden = document.hidden || document.visibilityState === "hidden";
+      const isBlur = ev.type === "blur";
+
+      // Only increment when we transition from visible to hidden/blur
+      const wasHidden = prevHiddenRef.current || false;
+      if (!wasHidden && (isHidden || isBlur)) {
+        // increment local ref + state
+        tabSwitchCountRef.current = (tabSwitchCountRef.current || 0) + 1;
+        setTabSwitchCount(tabSwitchCountRef.current);
+
+        // Best-effort: send latest answers but don't await in event handler
+        const latestAnswers = payloadRef.current?.answers || {};
+        reportTabSwitch({ testId, answers: latestAnswers })
+          .then((resp) => {
+            // server may auto-submit; let server be canonical
+            if (handleServerAutoSubmit(resp)) return;
+
+            // If server returned a tab_switches_count >= threshold and user not in fullscreen,
+            // start violation countdown. We do NOT immediately submit on client.
+            const data = resp?.data ?? resp ?? {};
+            const count = data.tab_switches_count ?? tabSwitchCountRef.current;
+            if (count >= MAX_TAB_SWITCHES && !document.fullscreenElement) {
+              if (!violationActive) {
+                setViolationActive(true);
+                setViolationCountdown(VIOLATION_SECONDS);
+                startViolationCountdown();
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn("reportTabSwitch failed:", err);
+            // Network error: do NOT auto-submit locally immediately. Optionally notify user.
+          });
+      }
+
+      prevHiddenRef.current = (isHidden || isBlur);
+    };
+
+    window.addEventListener("blur", handleTabEvent);
+    document.addEventListener("visibilitychange", handleTabEvent);
+
+    return () => {
+      window.removeEventListener("blur", handleTabEvent);
+      document.removeEventListener("visibilitychange", handleTabEvent);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, testId, payload, violationActive]);
+
+  // ---------- instruction timer ----------
   useEffect(() => {
     if (phase !== "instructions") return;
 
-    // if not fullscreen, do not start timer (it will be started when fullscreen restored)
     if (!fullscreenGranted) {
-      // show overlay and pause timer
       setIsBlockedForFs(true);
       return;
     }
 
     setIsBlockedForFs(false);
 
-    // start or continue timer
     if (insTimerRef.current) clearInterval(insTimerRef.current);
     insTimerRef.current = setInterval(() => {
       setInsSeconds((s) => {
@@ -216,8 +328,14 @@ useEffect(() => {
     };
   }, [phase, fullscreenGranted]);
 
-  // ---------- attempt to request fullscreen on mount (instructions) ----------
+  // ---------- try auto fullscreen on mount ----------
   useEffect(() => {
+    if (DEV_MODE) {
+    setFullscreenGranted(true); // pretend we have fullscreen in dev
+    setShowEnterFsButton(false);
+    setIsBlockedForFs(false);
+    return;
+  }
     const tryFs = async () => {
       try {
         if (document.documentElement.requestFullscreen) {
@@ -236,36 +354,39 @@ useEffect(() => {
       }
     };
 
-    // only try when showing instructions
     if (phase === "instructions") {
-      // small timeout to let render happen
       setTimeout(tryFs, 200);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
+  }, []);
 
-  // fullscreen change listener (works for both instruction & test phase)
+  // ---------- fullscreen change listener ----------
   useEffect(() => {
+     if (DEV_MODE) {
+    console.log("[DEV_MODE] skipping fullscreenchange listener");
+    return;
+  }
     const onFsChange = () => {
       const isFs = !!document.fullscreenElement;
       if (!isFs) {
         console.log("[FS] Not in fullscreen");
         setFullscreenGranted(false);
-        // behavior depends on phase
         if (phase === "instructions") {
-          // block and pause instruction timer
           setIsBlockedForFs(true);
           setShowEnterFsButton(true);
         } else if (phase === "test") {
-          // start violation countdown in test phase
-          startViolationCountdown();
+          // start violation countdown (do NOT immediate-submit)
+          if (!violationActive) {
+            setViolationActive(true);
+            setViolationCountdown(VIOLATION_SECONDS);
+            startViolationCountdown();
+          }
         }
       } else {
         console.log("[FS] Entered fullscreen");
         setFullscreenGranted(true);
         setShowEnterFsButton(false);
         setIsBlockedForFs(false);
-        // clear violation if any
         clearViolationCountdown();
       }
     };
@@ -277,9 +398,9 @@ useEffect(() => {
       document.removeEventListener("webkitfullscreenchange", onFsChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, violationActive]);
 
-  // visibility change (treat as leaving fullscreen)
+  // visibility change (treat as leaving fullscreen for the instructions case)
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) {
@@ -289,16 +410,19 @@ useEffect(() => {
           setShowEnterFsButton(true);
           setFullscreenGranted(false);
         } else if (phase === "test" && fullscreenGranted) {
-          startViolationCountdown();
+          if (!violationActive) {
+            setViolationActive(true);
+            setViolationCountdown(VIOLATION_SECONDS);
+            startViolationCountdown();
+          }
         }
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, fullscreenGranted]);
+  }, [phase, fullscreenGranted, violationActive]);
 
-  // ---------- Enter fullscreen by user click ----------
   const enterFullscreenOnClick = async () => {
     try {
       if (document.documentElement.requestFullscreen) {
@@ -311,87 +435,11 @@ useEffect(() => {
       setFullscreenGranted(true);
       setShowEnterFsButton(false);
       setIsBlockedForFs(false);
-      // resume instruction timer if in instructions
     } catch (err) {
       console.warn("User fullscreen attempt failed", err);
       showAlert("Could not enter fullscreen. Please check browser settings or try a different browser.");
     }
   };
-
-
-// --- add this effect near your other effects ---
-
-// stop autosave when attempt is submitted
-useEffect(() => {
-  if (attemptSubmitted) {
-    if (autosaveRef.current) {
-      clearInterval(autosaveRef.current);
-      autosaveRef.current = null;
-      console.log("[Autosave] stopped due to submission");
-    }
-  }
-}, [attemptSubmitted]);
-// Direct submit (no confirmation). Re-usable by violation timeout & time-up.
-// Direct submit (no confirmation before sending). Re-usable by violation timeout & time-up.
-const submitTestDirect = async () => {
-  try {
-    // prevent double-submit
-    if (attemptSubmittedRef.current) {
-      console.log("[SubmitDirect] already submitted, skipping");
-      return;
-    }
-    attemptSubmittedRef.current = true;
-    setAttemptSubmitted(true);
-    setIsSubmitting(true);
-
-    // stop autosave immediately
-    if (autosaveRef.current) {
-      clearInterval(autosaveRef.current);
-      autosaveRef.current = null;
-      console.log("[Autosave] stopped due to direct submission");
-    }
-
-    // make request -- mirror handleSubmitTest payload (adjust if backend expects different shape)
-    const resp = await privateAxios.post("/api/students/test/submit", {
-      test_id: testId,
-      answers: payload?.answers || {},
-    });
-
-    if (resp?.data?.success) {
-      setSubmittedResult(resp.data.data ?? resp.data);
-      setPhase("ended");
-
-      // Use showConfirm so user explicitly acknowledges success before we close the window
-      showConfirm("Test submitted successfully!")
-        .then((ok) => {
-          // If user clicked OK (ok === true), try to close the window
-          try {
-            if (ok) window.close();
-          } catch (e) {
-            // ignore - many browsers block window.close() for tabs not opened by script
-            console.warn("Window close failed", e);
-          }
-        })
-        .catch(() => {
-          // If modal was dismissed (or promise rejected), still end the flow
-          try { window.close(); } catch (e) {}
-        });
-    } else {
-      // submission failed - allow retry (clear attemptSubmittedRef so manual submit possible)
-      attemptSubmittedRef.current = false;
-      setAttemptSubmitted(false);
-      showConfirm(resp?.data?.message || "Auto-submission failed.");
-    }
-  } catch (err) {
-    console.error("[submitTestDirect] failed:", err);
-    attemptSubmittedRef.current = false;
-    setAttemptSubmitted(false);
-    showConfirm("Error auto-submitting test. Please try to submit manually.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
 
   // ---------- Start test: fetch payload and initialize section timers ----------
   const startTestPhase = async () => {
@@ -402,7 +450,6 @@ const submitTestDirect = async () => {
       const data = resp.data.data ?? resp.data;
       setPayload(data);
 
-      // extract time-restricted sections and open sections
       const testObj = data?.test ?? data?.data?.test ?? data;
       const timeSecs = (testObj?.sections_time_restricted || []).map((s) => ({
         ...s,
@@ -410,9 +457,7 @@ const submitTestDirect = async () => {
       }));
       const opens = (testObj?.sections_open || []).map((s) => ({ ...s }));
 
-      // --- Hydrate question.answer from any saved answers in server payload (back-compat)
-      // Expect savedAnswers shape: { [sectionId]: { [questionId]: [...] } } 
-      // but also support numeric-index keys for backward compat.
+      // hydrate saved answers (back-compat)
       const savedAnswers = (data && data.answers) || resp.data.answers || resp.data.data?.answers || null;
       if (savedAnswers) {
         timeSecs.forEach((s) => {
@@ -440,7 +485,7 @@ const submitTestDirect = async () => {
       setTimeSections(timeSecs);
       setOpenSections(opens);
 
-      // init question states for time sections and open sections (keyed by questionId)
+      // init question states
       const initStates = {};
       timeSecs.forEach((s) => {
         initStates[s.id] = {};
@@ -458,7 +503,7 @@ const submitTestDirect = async () => {
       });
       setQuestionStates(initStates);
 
-      // set global duration as before for compatibility (optional)
+      // global duration fallback (compat)
       const duration =
         testObj?.duration_seconds ??
         (timeSecs.reduce((s, sec) => s + (sec.__durationSeconds || 0), 0) +
@@ -467,19 +512,17 @@ const submitTestDirect = async () => {
         3600;
       setSecondsLeft(duration);
 
-      // initialize first section timer if exists
       if (timeSecs.length > 0) {
         setCurrentTimeSectionIndex(0);
         setSectionSecondsLeft(timeSecs[0].__durationSeconds || 0);
         setCurrentQuestionIndex(0);
         setOpenModeActive(false);
       } else {
-        // no time sections -> open mode immediately
         setOpenModeActive(true);
         setCurrentOpenSectionId(opens[0]?.id ?? null);
       }
 
-      // try to request fullscreen again (best-effort); if blocked, show CTA (we treat fullscreen strongly)
+      // try fullscreen again
       try {
         if (document.documentElement.requestFullscreen) {
           await document.documentElement.requestFullscreen();
@@ -494,21 +537,16 @@ const submitTestDirect = async () => {
         setShowEnterFsButton(true);
       }
 
-      // start autosave placeholder (keep interval same)
-  // start autosave placeholder (keep interval same)
-// use payloadRef.current so we always get the latest payload inside the interval
-    if (autosaveRef.current) clearInterval(autosaveRef.current);
-    autosaveRef.current = setInterval(() => {
-    const latest = payloadRef.current;
-    console.log("[Autosave] latest payload (from ref):", latest);
-    console.log("[Autosave] testId:", testId, "timestamp:", new Date().toISOString(), "answers:", (latest?.answers ?? {}));
-    // Optionally: send payload to server here (debounce or batch in production)
-    // only attempt save when we actually have an attempt id
-    if (latest?.test_assignment_id) {
-        privateAxios.post('/api/students/test/auto-save', { attemptId: latest.test_assignment_id, answers: latest.answers,test_id:testId })
-        .catch((err) => console.error("Autosave failed", err));
-    }
-    }, 5000);
+      // start autosave (use payloadRef for latest)
+      if (autosaveRef.current) clearInterval(autosaveRef.current);
+      autosaveRef.current = setInterval(() => {
+        const latest = payloadRef.current;
+        console.log("[Autosave] testId:", testId, "timestamp:", new Date().toISOString(), "answers:", (latest?.answers ?? {}));
+        if (latest?.test_assignment_id) {
+          privateAxios.post('/api/students/test/auto-save', { attemptId: latest.test_assignment_id, answers: latest.answers, test_id: testId })
+            .catch((err) => console.error("Autosave failed", err));
+        }
+      }, 5000);
 
     } catch (err) {
       console.error("Failed to fetch test payload:", err);
@@ -516,20 +554,17 @@ const submitTestDirect = async () => {
     }
   };
 
-  // ---------- Section timer: runs only while in time mode ----------
+  // ---------- Section timer ----------
   useEffect(() => {
-    // only run when in test phase and not in open mode, and we have a sectionSecondsLeft
     if (phase !== "test" || openModeActive) return;
     if (sectionSecondsLeft == null) return;
 
-    // clear existing
     if (sectionTimerRef.current) clearInterval(sectionTimerRef.current);
     sectionTimerRef.current = setInterval(() => {
       setSectionSecondsLeft((prev) => {
         if (prev == null) return prev;
         if (prev <= 1) {
           clearInterval(sectionTimerRef.current);
-          // mark section completed and advance
           markCurrentSectionCompletedAndAdvance();
           return 0;
         }
@@ -549,7 +584,6 @@ const submitTestDirect = async () => {
   const markCurrentSectionCompletedAndAdvance = () => {
     const current = timeSections[currentTimeSectionIndex];
     if (!current) {
-      // nothing to do - switch into open mode if no sections left
       setOpenModeActive(true);
       setCurrentOpenSectionId(openSections[0]?.id ?? null);
       return;
@@ -563,23 +597,19 @@ const submitTestDirect = async () => {
 
     const nextIndex = currentTimeSectionIndex + 1;
     if (nextIndex < timeSections.length) {
-      // move to next time section
       setCurrentTimeSectionIndex(nextIndex);
       setCurrentQuestionIndex(0);
       setSectionSecondsLeft(timeSections[nextIndex].__durationSeconds || 0);
     } else {
-      // finished all time sections -> switch to open mode
       setOpenModeActive(true);
       setCurrentOpenSectionId(openSections[0]?.id ?? null);
       setSectionSecondsLeft(null);
     }
   };
 
-  // Manual advance: user may choose to advance to next time section before timer ends, but cannot come back
   const manualAdvanceSection = () => {
     const current = timeSections[currentTimeSectionIndex];
     if (!current) {
-      // if no current section, switch to open
       setOpenModeActive(true);
       setCurrentOpenSectionId(openSections[0]?.id ?? null);
       return;
@@ -596,385 +626,200 @@ const submitTestDirect = async () => {
       setCurrentQuestionIndex(0);
       setSectionSecondsLeft(timeSections[nextIndex].__durationSeconds || 0);
     } else {
-      // all done
       setOpenModeActive(true);
       setCurrentOpenSectionId(openSections[0]?.id ?? null);
       setSectionSecondsLeft(null);
     }
   };
-// Manual submit (keeps the pre-submit confirmation) but uses showConfirm for success acknowledgement.
-const handleSubmitTest = async () => {
-  if (!payload?.test_assignment_id) {
-    showConfirm("No attempt found. Please refresh.");
-    return;
-  }
 
-  const ok = await showConfirm(
-    "Are you sure you want to submit the test? You will not be able to change answers after this."
-  );
-  if (!ok) return;
-
-  try {
-    setIsSubmitting(true);
-    const resp = await privateAxios.post("/api/students/test/submit", {
-      test_id: testId,
-      answers: payload.answers || {},
-    });
-
-    if (resp?.data?.success) {
-      setSubmittedResult(resp.data.data);
-      setPhase("ended");
-
-      // Show success using showConfirm and close window when user presses OK
-      showConfirm("Test submitted successfully!").then((userOk) => {
-        try {
-          if (userOk) window.close();
-        } catch (e) {
-          console.warn("Window close failed", e);
-        }
-      });
-    } else {
-      showConfirm(resp?.data?.message || "Submission failed.");
+  const handleSubmitTest = async () => {
+    if (!payload?.test_assignment_id) {
+      showConfirm("No attempt found. Please refresh.");
+      return;
     }
-  } catch (err) {
-    console.error("Submit failed:", err);
-    showConfirm("Error submitting test. Try again.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
 
+    const ok = await showConfirm(
+      "Are you sure you want to submit the test? You will not be able to change answers after this."
+    );
+    if (!ok) return;
 
-  // Navigation within active time section (both directions allowed)
-  // signature maintained: (sectionId, questionIndex)
-  const handleNavigateTimeSection = (sectionId, questionIndex) => {
-    const activeSection = timeSections[currentTimeSectionIndex];
-    if (!activeSection) return;
-    // only allow navigation inside active section (both directions)
-    if (sectionId !== activeSection.id) return;
-    setCurrentQuestionIndex(questionIndex);
+    try {
+      setIsSubmitting(true);
+      const resp = await privateAxios.post("/api/students/test/submit", {
+        test_id: testId,
+        answers: payload.answers || {},
+      });
 
-    // mark viewed by questionId
-    const qObj = activeSection?.questions?.[questionIndex];
-    const qId = qObj?.id ?? qObj?.question_id ?? String(questionIndex);
-    setQuestionStates((prev) => ({
-      ...prev,
-      [sectionId]: {
-        ...prev[sectionId],
-        [qId]: {
-          ...prev[sectionId]?.[qId],
-          viewed: true,
-        },
-      },
-    }));
-  };
+      if (resp?.data?.success) {
+        setSubmittedResult(resp.data.data);
+        setPhase("ended");
 
-  // Open-mode navigation (free) - signature maintained: (sectionId, questionIndex)
-  const handleNavigateOpen = (sectionId, questionIndex) => {
-    setCurrentOpenSectionId(sectionId);
-    setCurrentOpenQuestionIndex(questionIndex);
-    const sec = (openSections.find((s) => s.id === sectionId) || {});
-    const qObj = sec?.questions?.[questionIndex];
-    const qId = qObj?.id ?? qObj?.question_id ?? String(questionIndex);
-    setQuestionStates((prev) => ({
-      ...prev,
-      [sectionId]: {
-        ...prev[sectionId],
-        [qId]: {
-          ...prev[sectionId]?.[qId],
-          viewed: true,
-        },
-      },
-    }));
-  };
-
-  // Mark question solved helper (now accepts questionId)
-  const markQuestionSolved = (sectionId, questionId) => {
-    if (!sectionId || !questionId) return;
-    setQuestionStates((prev) => ({
-      ...prev,
-      [sectionId]: {
-        ...prev[sectionId],
-        [questionId]: {
-          ...prev[sectionId]?.[questionId],
-          viewed: true,
-          solved: true,
-        },
-      },
-    }));
-  };
-
-useEffect(() => {
-  if (phase !== "test") return;
-  if (secondsLeft == null) return;
-  if (testTimerRef.current) clearInterval(testTimerRef.current);
-  testTimerRef.current = setInterval(() => {
-    setSecondsLeft((prev) => {
-      if (prev == null) return prev;
-      if (prev <= 1) {
-        clearInterval(testTimerRef.current);
-        console.log("Time up - auto-submitting test");
-        // Use the direct submit so answers get posted
-        if (!attemptSubmittedRef.current) {
-          submitTestDirect();
-        } else {
-          // if already submitted for some reason, ensure phase is ended
-          setPhase("ended");
-        }
-        return 0;
+        showConfirm("Test submitted successfully!").then((userOk) => {
+          try {
+            if (userOk) window.close();
+          } catch (e) {}
+        });
+      } else {
+        showConfirm(resp?.data?.message || "Submission failed.");
       }
-      return prev - 1;
-    });
-  }, 1000);
-  return () => {
-    if (testTimerRef.current) clearInterval(testTimerRef.current);
-    testTimerRef.current = null;
-  };
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [phase, secondsLeft]);
-
-  // ---------- Violation helpers (test phase) ----------
-  const startViolationCountdown = () => {
-    if (violationActive) return;
-    setViolationActive(true);
-    setViolationCountdown(VIOLATION_SECONDS);
-    violationTimerRef.current = setInterval(() => {
-      setViolationCountdown((prev) => {
-       if (prev <= 1) {
-            clearInterval(violationTimerRef.current);
-            console.log("Violation timeout — auto-submitting test");
-            setViolationActive(false);
-            // call auto-submit (guarded against double submissions)
-            if (!attemptSubmittedRef.current) {
-                submitTestDirect();
-            }
-            return 0;
-            }
-
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const clearViolationCountdown = () => {
-    if (violationTimerRef.current) {
-      clearInterval(violationTimerRef.current);
-      violationTimerRef.current = null;
+    } catch (err) {
+      console.error("Submit failed:", err);
+      showConfirm("Error submitting test. Try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setViolationActive(false);
-    setViolationCountdown(VIOLATION_SECONDS);
   };
 
-  // cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (insTimerRef.current) clearInterval(insTimerRef.current);
-      if (testTimerRef.current) clearInterval(testTimerRef.current);
-      if (autosaveRef.current) clearInterval(autosaveRef.current);
-      if (violationTimerRef.current) clearInterval(violationTimerRef.current);
-      if (sectionTimerRef.current) clearInterval(sectionTimerRef.current);
-    };
-  }, []);
-
-  // helpers
-  const humanTime = (s) => {
-    if (s == null) return "--:--";
-    const hrs = Math.floor(s / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (hrs > 0) return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-    return `${String(mins).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  };
-
-  // ------------------ QUESTION NORMALIZATION HELPER ------------------
-  // Accepts either: { question: { ... } } OR the question object itself
-  const getQuestionObj  = (qWrapper) => {
+  // navigation & question helpers
+  const getQuestionObj = (qWrapper) => {
     if (!qWrapper) return null;
     const inner = qWrapper.question ?? qWrapper;
-
-    // question_type may live on the wrapper (qWrapper.question_type) — use that first,
-    // otherwise fallback to inner.question_type or inner.type
     const questionType = qWrapper.question_type ?? inner.question_type ?? inner.type ?? null;
-
-
     return {
       ...inner,
       question_type: questionType
     };
   };
-const findQuestionType = (sectionId, questionId) => {
-  const timeSec = timeSections.find((s) => s.id === sectionId);
-  const openSec = openSections.find((s) => s.id === sectionId);
-  const sec = timeSec || openSec;
-  console.log(sec);
-  if (!sec) return null;
 
-  const q = (sec.questions || []).find((qq, idx) => {
-    const inner = qq?.question ?? qq;  // support wrapper shape
-    const qId = inner?.id ?? inner?.question_id ?? String(idx);
-    return String(qId) === String(questionId);
-  });
+  const findQuestionType = (sectionId, questionId) => {
+    const timeSec = timeSections.find((s) => s.id === sectionId);
+    const openSec = openSections.find((s) => s.id === sectionId);
+    const sec = timeSec || openSec;
+    if (!sec) return null;
 
-//   console.log("question is");
-//   console.log(q);
+    const q = (sec.questions || []).find((qq, idx) => {
+      const inner = qq?.question ?? qq;
+      const qId = inner?.id ?? inner?.question_id ?? String(idx);
+      return String(qId) === String(questionId);
+    });
 
-  if (!q) return null;
+    if (!q) return null;
+    const inner = q?.question ?? q;
+    return q?.question_type ?? inner?.question_type ?? q?.type ?? inner?.type ?? null;
+  };
 
-  // prefer wrapper.question_type, then inner.question_type, then type
-  const inner = q?.question ?? q;
-  return q?.question_type ?? inner?.question_type ?? q?.type ?? inner?.type ?? null;
-};
+  // persist answers keyed by questionId
+  const storeAnswerForQuestion = (sectionId, questionId, answer) => {
+    if (!sectionId || !questionId) return;
+    const incoming = Array.isArray(answer) ? answer.map(String) : (answer ? [String(answer)] : []);
+    const qType = findQuestionType(sectionId, questionId);
 
+    setPayload((prev) => {
+      const next = prev ? { ...prev } : {};
+      next.answers = next.answers ? { ...next.answers } : {};
+      next.answers[sectionId] = next.answers[sectionId] ? { ...next.answers[sectionId] } : {};
 
-  // ----------------- NEW: Persist answers keyed by questionId -----------------
-  // Store answer into payload.answers[sectionId][questionId] (always an array of option_id strings)
- // Replace existing storeAnswerForQuestion with this version
-const storeAnswerForQuestion = (sectionId, questionId, answer) => {
-  if (!sectionId || !questionId) return;
+      const existingRaw = next.answers[sectionId][questionId];
 
-  // normalize incoming to array (could be a single id or array)
-  const incoming = Array.isArray(answer) ? answer.map(String) : (answer ? [String(answer)] : []);
-  const qType = findQuestionType(sectionId, questionId);
+      const existingArray = (() => {
+        if (existingRaw == null) return [];
+        if (Array.isArray(existingRaw)) return existingRaw.map(String);
+        if (typeof existingRaw === "object" && Array.isArray(existingRaw.value)) return existingRaw.value.map(String);
+        return [String(existingRaw)];
+      })();
 
-  setPayload((prev) => {
-    const next = prev ? { ...prev } : {};
-    next.answers = next.answers ? { ...next.answers } : {};
-    next.answers[sectionId] = next.answers[sectionId] ? { ...next.answers[sectionId] } : {};
+      if (qType === "coding") {
+        const merged = Array.from(new Set([...existingArray, ...incoming]));
+        next.answers[sectionId][questionId] = { value: merged, qwell: qType ?? null };
+      } else {
+        next.answers[sectionId][questionId] = { value: incoming, qwell: qType ?? null };
+      }
 
-    const existingRaw = next.answers[sectionId][questionId];
+      return next;
+    });
 
-    // unwrap existing (support legacy object { value: [...], qwell } or raw array)
-    const existingArray = (() => {
-      if (existingRaw == null) return [];
-      if (Array.isArray(existingRaw)) return existingRaw.map(String);
-      if (typeof existingRaw === "object" && Array.isArray(existingRaw.value)) return existingRaw.value.map(String);
-      // fallback: scalar
-      return [String(existingRaw)];
+    const toStoreForUI = (() => {
+      const findCurrent = () => {
+        const sec = timeSections.find((s) => s.id === sectionId) || openSections.find((s) => s.id === sectionId);
+        if (!sec) return [];
+        const q = (sec.questions || []).find((qq, idx) => {
+          const inner = qq?.question ?? qq;
+          const qId = inner?.id ?? inner?.question_id ?? String(idx);
+          return String(qId) === String(questionId);
+        });
+        const raw = q?.answer ?? null;
+        if (raw == null) return [];
+        if (Array.isArray(raw)) return raw.map(String);
+        if (typeof raw === "object" && Array.isArray(raw.value)) return raw.value.map(String);
+        return [String(raw)];
+      };
+
+      if (qType === "coding") {
+        const existing = findCurrent();
+        const merged = Array.from(new Set([...existing, ...incoming]));
+        return merged;
+      } else {
+        return incoming;
+      }
     })();
 
-    // If coding question, merge (append) and dedupe; otherwise replace
-    if (qType === "coding") {
-      const merged = Array.from(new Set([...existingArray, ...incoming]));
-      // Keep legacy metadata shape (value + qwell) to remain backward compatible
-      next.answers[sectionId][questionId] = { value: merged, qwell: qType ?? null };
-    } else {
-        console.log("incoming",incoming)
-      // For non-coding questions we keep original behavior (store value with qwell metadata)
-      next.answers[sectionId][questionId] = { value: incoming, qwell: qType ?? null };
-    }
-
-    return next;
-  });
-
-  // 2) Update in-memory question arrays so question objects hold the answer.
-  //    For coding we store the merged array; for others we store incoming array.
-  const toStoreForUI = (() => {
-    // determine existing in-memory value for merging if coding
-    const findCurrent = () => {
-      // look in timeSections first
-      const sec = timeSections.find((s) => s.id === sectionId) || openSections.find((s) => s.id === sectionId);
-      if (!sec) return [];
-      const q = (sec.questions || []).find((qq, idx) => {
-        const inner = qq?.question ?? qq;
-        const qId = inner?.id ?? inner?.question_id ?? String(idx);
-        return String(qId) === String(questionId);
+    setTimeSections((prev) => {
+      if (!prev || prev.length === 0) return prev;
+      const idx = prev.findIndex((s) => s.id === sectionId);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      const sec = { ...next[idx] };
+      const qs = (sec.questions || []).map((q) => {
+        const qCopy = { ...q };
+        const qId = qCopy.id ?? qCopy.question_id ?? null;
+        if (qId === questionId) {
+          qCopy.answer = toStoreForUI;
+        }
+        return qCopy;
       });
-      const raw = q?.answer ?? null;
-      if (raw == null) return [];
-      if (Array.isArray(raw)) return raw.map(String);
-      if (typeof raw === "object" && Array.isArray(raw.value)) return raw.value.map(String);
-      return [String(raw)];
-    };
-
-    if (qType === "coding") {
-      const existing = findCurrent();
-      const merged = Array.from(new Set([...existing, ...incoming]));
-      return merged;
-    } else {
-      return incoming;
-    }
-  })();
-
-  setTimeSections((prev) => {
-    if (!prev || prev.length === 0) return prev;
-    const idx = prev.findIndex((s) => s.id === sectionId);
-    if (idx === -1) return prev;
-    const next = [...prev];
-    const sec = { ...next[idx] };
-    const qs = (sec.questions || []).map((q) => {
-      const qCopy = { ...q };
-      const qId = qCopy.id ?? qCopy.question_id ?? null;
-      if (qId === questionId) {
-        qCopy.answer = toStoreForUI;
-      }
-      return qCopy;
+      sec.questions = qs;
+      next[idx] = sec;
+      return next;
     });
-    sec.questions = qs;
-    next[idx] = sec;
-    return next;
-  });
 
-  setOpenSections((prev) => {
-    if (!prev || prev.length === 0) return prev;
-    const idx = prev.findIndex((s) => s.id === sectionId);
-    if (idx === -1) return prev;
-    const next = [...prev];
-    const sec = { ...next[idx] };
-    const qs = (sec.questions || []).map((q) => {
-      const qCopy = { ...q };
-      const qId = qCopy.id ?? qCopy.question_id ?? null;
-      if (qId === questionId) {
-        qCopy.answer = toStoreForUI;
-      }
-      return qCopy;
+    setOpenSections((prev) => {
+      if (!prev || prev.length === 0) return prev;
+      const idx = prev.findIndex((s) => s.id === sectionId);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      const sec = { ...next[idx] };
+      const qs = (sec.questions || []).map((q) => {
+        const qCopy = { ...q };
+        const qId = qCopy.id ?? qCopy.question_id ?? null;
+        if (qId === questionId) {
+          qCopy.answer = toStoreForUI;
+        }
+        return qCopy;
+      });
+      sec.questions = qs;
+      next[idx] = sec;
+      return next;
     });
-    sec.questions = qs;
-    next[idx] = sec;
-    return next;
-  });
-};
+  };
 
-
-  // Helper to read saved answer for a question (prefers in-memory question.answer then payload map by id)
-  // Helper to read saved answer for a question (prefers in-memory question.answer then payload map by id)
-  // Always normalizes returned answer IDs to an array of strings (or null if no answer).
   const getSavedAnswer = (sectionId, questionObj, fallbackIndex = null) => {
     const unwrap = (raw) => {
       if (raw == null) return null;
-      // support legacy object shape { value: [...] }
       if (typeof raw === "object" && Array.isArray(raw.value)) {
         return raw.value.map((v) => String(v));
       }
       if (Array.isArray(raw)) return raw.map((v) => String(v));
-      // fallback: scalar
       return [String(raw)];
     };
 
-    // If no sectionId or questionObj provided, attempt to return fallback if present
     if (!sectionId || !questionObj) {
       if (fallbackIndex != null && payload?.answers?.[sectionId]) {
         return unwrap(payload?.answers?.[sectionId]?.[String(fallbackIndex)] ?? null);
       }
       return null;
     }
-    // console.log(questionObj)
 
-    // determine question id (robust to different key names)
-    const qId = questionObj.question.id ?? questionObj.question_id ?? questionObj.questionId ?? null;
-    // console.log("qid",qId)
-    // prefer in-memory question.answer first
+    const qId = questionObj.question?.id ?? questionObj.question_id ?? questionObj.questionId ?? null;
     const rawFromQuestion = questionObj.answer ?? null;
     if (rawFromQuestion != null) {
       return unwrap(rawFromQuestion);
     }
 
-    // then try payload map (payload.answers[sectionId][qId])
     const rawFromPayload = payload?.answers?.[sectionId]?.[qId] ?? payload?.answers?.[sectionId]?.[String(qId)] ?? null;
     if (rawFromPayload != null) {
       return unwrap(rawFromPayload);
     }
 
-    // final fallback: try numeric index, if provided
     if (fallbackIndex != null) {
       return unwrap(payload?.answers?.[sectionId]?.[String(fallbackIndex)] ?? null);
     }
@@ -982,21 +827,30 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     return null;
   };
 
-
-  // Helper to advance to next question inside a time section
   const advanceToNextQuestionInTimeSection = () => {
     const nxt = currentQuestionIndex + 1;
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     if (nxt < (activeTimeSection?.questions || []).length) {
       setCurrentQuestionIndex(nxt);
     } else {
-      // reached end of section - user can manual advance or wait for timer
       showAlert("End of section questions. You can Advance Section or wait for timer to auto-advance.");
     }
   };
 
-  // ---------- Handlers: MCQ / Rearrange / Clear (time-mode & open-mode) ----------
-  // Time-mode MCQ solved
+  const advanceOpenQuestionAfterSave = (sectionId) => {
+    if (!sectionId) return;
+    const sec = openSections.find((s) => s.id === sectionId);
+    if (!sec) return;
+    const currentIdx = currentOpenQuestionIndex;
+    const nxt = currentIdx + 1;
+    if (nxt < (sec?.questions || []).length) {
+      setCurrentOpenQuestionIndex(nxt);
+    } else {
+      showAlert("End of section questions.");
+    }
+  };
+
+  // handlers for MCQ / Rearrange / Coding
   const handleMcqSolvedInTimeSection = (answerPayload) => {
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     if (!activeTimeSection) return;
@@ -1013,7 +867,6 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     }
   };
 
-  // Open-mode MCQ solved
   const handleMcqSolvedInOpenSection = (answerPayload) => {
     const activeOpenSection = openSections.find((s) => s.id === currentOpenSectionId);
     if (!activeOpenSection) return;
@@ -1023,9 +876,9 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
 
     storeAnswerForQuestion(activeOpenSection.id, qId, answerPayload);
     markQuestionSolved(activeOpenSection.id, qId);
+    advanceOpenQuestionAfterSave(activeOpenSection.id);
   };
 
-  // Rearrange time-mode
   const handleRearrangeSolvedInTimeSection = (orderArray) => {
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     if (!activeTimeSection) return;
@@ -1034,7 +887,6 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     if (!qId) return;
     storeAnswerForQuestion(activeTimeSection.id, qId, orderArray);
     markQuestionSolved(activeTimeSection.id, qId);
-    // After saving, advance to next question in time section
     advanceToNextQuestionInTimeSection();
   };
 
@@ -1062,7 +914,6 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     handleMcqNextWithoutSaveInTimeSection();
   };
 
-  // Open-mode rearrange
   const handleRearrangeSolvedInOpenSection = (orderArray) => {
     const activeOpenSection = openSections.find((s) => s.id === currentOpenSectionId);
     if (!activeOpenSection) return;
@@ -1071,6 +922,7 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     if (!qId) return;
     storeAnswerForQuestion(activeOpenSection.id, qId, orderArray);
     markQuestionSolved(activeOpenSection.id, qId);
+    advanceOpenQuestionAfterSave(activeOpenSection.id);
   };
 
   const handleRearrangeClearInOpenSection = (clearedPayload) => {
@@ -1097,7 +949,6 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     handleMcqNextWithoutSaveInOpenSection();
   };
 
-  // Next without saving for time-mode: just advance locally (no store)
   const handleMcqNextWithoutSaveInTimeSection = () => {
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     const nxt = currentQuestionIndex + 1;
@@ -1108,7 +959,6 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
     }
   };
 
-  // CLEAR handler for time-mode: persist an empty answer but DO NOT advance
   const handleMcqClearInTimeSection = async (clearedPayload) => {
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     if (!activeTimeSection) return;
@@ -1127,66 +977,57 @@ const storeAnswerForQuestion = (sectionId, questionId, answer) => {
         },
       },
     }));
-    // do NOT advance currentQuestionIndex
   };
-const handleCodingSolvedInOpenSection = (submissionIds) => {
-  const activeOpenSection = openSections.find((s) => s.id === currentOpenSectionId);
-  if (!activeOpenSection) return;
-  const qObj = getQuestionObj(activeOpenSection?.questions?.[currentOpenQuestionIndex]);
-  const qId = qObj?.id ?? activeOpenSection?.questions?.[currentOpenQuestionIndex]?.id;
-  if (!qId) return;
 
-  // normalize & dedupe
-  const ids = (submissionIds || []).map(String);
-  const unique = Array.from(new Set(ids));
+  const handleCodingSolvedInOpenSection = (submissionIds) => {
+    const activeOpenSection = openSections.find((s) => s.id === currentOpenSectionId);
+    if (!activeOpenSection) return;
+    const qObj = getQuestionObj(activeOpenSection?.questions?.[currentOpenQuestionIndex]);
+    const qId = qObj?.id ?? activeOpenSection?.questions?.[currentOpenQuestionIndex]?.id;
+    if (!qId) return;
 
-  storeAnswerForQuestion(activeOpenSection.id, qId, unique);
-  markQuestionSolved(activeOpenSection.id, qId);
+    const ids = (submissionIds || []).map(String);
+    const unique = Array.from(new Set(ids));
 
-setSubmissionIdsByQuestion((prev) => {
-  const next = { ...(prev || {}) };
-  next[activeOpenSection.id] = { ...(next[activeOpenSection.id] || {}) };
+    storeAnswerForQuestion(activeOpenSection.id, qId, unique);
+    markQuestionSolved(activeOpenSection.id, qId);
 
-  const prevIds = next[activeOpenSection.id][qId] || [];
-  const merged = Array.from(new Set([...prevIds, ...unique]));
+    setSubmissionIdsByQuestion((prev) => {
+      const next = { ...(prev || {}) };
+      next[activeOpenSection.id] = { ...(next[activeOpenSection.id] || {}) };
 
-  next[activeOpenSection.id][qId] = merged;
-  return next;
-});
+      const prevIds = next[activeOpenSection.id][qId] || [];
+      const merged = Array.from(new Set([...prevIds, ...unique]));
 
-};
+      next[activeOpenSection.id][qId] = merged;
+      return next;
+    });
+  };
 
-const handleCodingSolvedInTimeSection = (submissionIds) => {
-  const activeTimeSection = timeSections[currentTimeSectionIndex];
-  if (!activeTimeSection) return;
-  const qObj = getQuestionObj(activeTimeSection?.questions?.[currentQuestionIndex]);
-  const qId = qObj?.id ?? activeTimeSection?.questions?.[currentQuestionIndex]?.id;
-  if (!qId) return;
+  const handleCodingSolvedInTimeSection = (submissionIds) => {
+    const activeTimeSection = timeSections[currentTimeSectionIndex];
+    if (!activeTimeSection) return;
+    const qObj = getQuestionObj(activeTimeSection?.questions?.[currentQuestionIndex]);
+    const qId = qObj?.id ?? activeTimeSection?.questions?.[currentQuestionIndex]?.id;
+    if (!qId) return;
 
-  // normalize incoming ids to strings and dedupe
-  const ids = (submissionIds || []).map(String);
-  const unique = Array.from(new Set(ids));
+    const ids = (submissionIds || []).map(String);
+    const unique = Array.from(new Set(ids));
 
-  // persist answer (keeps your existing storage shape)
-  storeAnswerForQuestion(activeTimeSection.id, qId, unique);
-  markQuestionSolved(activeTimeSection.id, qId);
+    storeAnswerForQuestion(activeTimeSection.id, qId, unique);
+    markQuestionSolved(activeTimeSection.id, qId);
 
-  // update local map so UI (SubmissionsTabs via CodeRunner initialSubmissions) refreshes
-setSubmissionIdsByQuestion((prev) => {
-  const next = { ...(prev || {}) };
-  next[activeTimeSection.id] = { ...(next[activeTimeSection.id] || {}) };
+    setSubmissionIdsByQuestion((prev) => {
+      const next = { ...(prev || {}) };
+      next[activeTimeSection.id] = { ...(next[activeTimeSection.id] || {}) };
 
-  const prevIds = next[activeTimeSection.id][qId] || [];
-  const merged = Array.from(new Set([...prevIds, ...unique]));
+      const prevIds = next[activeTimeSection.id][qId] || [];
+      const merged = Array.from(new Set([...prevIds, ...unique]));
 
-  next[activeTimeSection.id][qId] = merged;
-  return next;
-});
-
-
-  // optionally auto-advance:
-  // advanceToNextQuestionInTimeSection();
-};
+      next[activeTimeSection.id][qId] = merged;
+      return next;
+    });
+  };
 
   const handleMcqClearInOpenSection = async (clearedPayload) => {
     const activeOpenSection = openSections.find((s) => s.id === currentOpenSectionId);
@@ -1206,7 +1047,6 @@ setSubmissionIdsByQuestion((prev) => {
         },
       },
     }));
-    // don't change currentOpenQuestionIndex
   };
 
   const handleMcqNextWithoutSaveInOpenSection = () => {
@@ -1219,69 +1059,171 @@ setSubmissionIdsByQuestion((prev) => {
     }
   };
 
-  // ---------------- Render -----------------
-  // Instructions phase UI: show all 3 instructions and 2-min timer; block interaction unless fullscreen
+  // navigation functions used by sidebar
+  const handleNavigateTimeSection = (sectionId, questionIndex) => {
+    const activeSection = timeSections[currentTimeSectionIndex];
+    if (!activeSection) return;
+    if (sectionId !== activeSection.id) return;
+    setCurrentQuestionIndex(questionIndex);
+
+    const qObj = activeSection?.questions?.[questionIndex];
+    const qId = qObj?.id ?? qObj?.question_id ?? String(questionIndex);
+    setQuestionStates((prev) => ({
+      ...prev,
+      [sectionId]: {
+        ...prev[sectionId],
+        [qId]: {
+          ...prev[sectionId]?.[qId],
+          viewed: true,
+        },
+      },
+    }));
+  };
+
+  const handleNavigateOpen = (sectionId, questionIndex) => {
+    setCurrentOpenSectionId(sectionId);
+    setCurrentOpenQuestionIndex(questionIndex);
+    const sec = (openSections.find((s) => s.id === sectionId) || {});
+    const qObj = sec?.questions?.[questionIndex];
+    const qId = qObj?.id ?? qObj?.question_id ?? String(questionIndex);
+    setQuestionStates((prev) => ({
+      ...prev,
+      [sectionId]: {
+        ...prev[sectionId],
+        [qId]: {
+          ...prev[sectionId]?.[qId],
+          viewed: true,
+        },
+      },
+    }));
+  };
+
+  const markQuestionSolved = (sectionId, questionId) => {
+    if (!sectionId || !questionId) return;
+    setQuestionStates((prev) => ({
+      ...prev,
+      [sectionId]: {
+        ...prev[sectionId],
+        [questionId]: {
+          ...prev[sectionId]?.[questionId],
+          viewed: true,
+          solved: true,
+        },
+      },
+    }));
+  };
+
+  // test timer global
+  useEffect(() => {
+    if (phase !== "test") return;
+    if (secondsLeft == null) return;
+    if (testTimerRef.current) clearInterval(testTimerRef.current);
+    testTimerRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev == null) return prev;
+        if (prev <= 1) {
+          clearInterval(testTimerRef.current);
+          console.log("Time up - auto-submitting test");
+          if (!attemptSubmittedRef.current) {
+            submitTestDirect();
+          } else {
+            setPhase("ended");
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (testTimerRef.current) clearInterval(testTimerRef.current);
+      testTimerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, secondsLeft]);
+
+  // ---------- Violation helpers ----------
+  const startViolationCountdown = () => {
+      if (DEV_MODE) {
+    console.log("[DEV_MODE] startViolationCountdown skipped");
+    return;
+  }
+    if (violationTimerRef.current) return; // already running
+    setViolationActive(true);
+    setViolationCountdown(VIOLATION_SECONDS);
+    violationTimerRef.current = setInterval(() => {
+      setViolationCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(violationTimerRef.current);
+          violationTimerRef.current = null;
+          console.log("Violation timeout — auto-submitting test");
+          setViolationActive(false);
+
+          // best-effort: report final fullscreen violation with answers, let server handle auto-submission
+          (async () => {
+            try {
+              const latestAnswers = payloadRef.current?.answers || {};
+              const resp = await reportFullscreenViolation({ testId, answers: latestAnswers });
+              if (handleServerAutoSubmit(resp)) return;
+            } catch (e) {
+              console.error("reportFullscreenViolation failed:", e);
+            }
+            // fallback: client-side direct submit as last resort
+            if (!attemptSubmittedRef.current) {
+              submitTestDirect();
+            }
+          })();
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const clearViolationCountdown = () => {
+    if (violationTimerRef.current) {
+      clearInterval(violationTimerRef.current);
+      violationTimerRef.current = null;
+    }
+    setViolationActive(false);
+    setViolationCountdown(VIOLATION_SECONDS);
+  };
+
+  // cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (insTimerRef.current) clearInterval(insTimerRef.current);
+      if (testTimerRef.current) clearInterval(testTimerRef.current);
+      if (autosaveRef.current) clearInterval(autosaveRef.current);
+      if (violationTimerRef.current) clearInterval(violationTimerRef.current);
+      if (sectionTimerRef.current) clearInterval(sectionTimerRef.current);
+    };
+  }, []);
+
+  const humanTime = (s) => {
+    if (s == null) return "--:--";
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (hrs > 0) return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    return `${String(mins).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
+
+  // ------------------ Render -----------------
   if (phase === "instructions") {
     return (
-      <div className="min-h-screen bg-[#1E1E1E] text-white p-6 relative">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="m-0 text-xl font-semibold">Please read the instructions</h1>
-              <div className="text-[#CCCCCC] mt-1 text-sm">All instructions must be visible for at least 2 minutes.</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[#CCCCCC] text-xs">Time before test can be started</div>
-              <div className="text-[#4CA466] font-extrabold text-lg">{humanTime(insSeconds)}</div>
-            </div>
-          </div>
-
-          <div className="grid gap-3">
-            {INSTRUCTIONS.map((ins) => (
-              <div key={ins.id} className="bg-[#2D2D30] border rounded-lg p-4" style={{ borderColor: BORDER }}>
-                <div className="flex justify-between items-center">
-                  <div className="font-semibold">{ins.title}</div>
-                </div>
-                <p className="text-[#CCCCCC] mt-2">{ins.content}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-[#CCCCCC]">You must be in fullscreen during instructions. The timer pauses if you exit fullscreen.</div>
-            <div>
-              <button
-                onClick={startTestPhase}
-                disabled={insSeconds > 0}
-                className={`px-4 py-2 rounded-lg text-white border-0 ${insSeconds > 0 ? "bg-gray-600 cursor-not-allowed" : "bg-[#4CA466] cursor-pointer"}`}
-              >
-                {insSeconds > 0 ? `Wait ${humanTime(insSeconds)}` : "Start Test"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Overlay when not fullscreen during instructions */}
-        {(isBlockedForFs || showEnterFsButton) && (
-          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center flex-col text-white p-6">
-            <h2 className="mb-3 text-2xl">Fullscreen Required</h2>
-            <p className="text-[#CCCCCC] text-center max-w-2xl">
-              Fullscreen is required to view and start the test. Please click the button below to enter fullscreen.
-              The instruction timer will resume after you enter fullscreen.
-            </p>
-            <button
-              onClick={enterFullscreenOnClick}
-              className="mt-5 px-5 py-3 bg-[#4CA466] rounded-lg text-white"
-            >
-              Enter Fullscreen
-            </button>
-          </div>
-        )}
-      </div>
+     <InstructionsPanel 
+     instructions={INSTRUCTIONS}
+     seconds={insSeconds}
+     onStart={startTestPhase}
+     enterFullscreen={enterFullscreenOnClick}
+     isBlockedForFs={isBlockedForFs}
+     showEnterFsButton={showEnterFsButton}
+     humanTime={humanTime}
+     />
     );
   }
 
-  // Test phase UI
   if (phase === "test") {
     if (payload?._error) {
       return (
@@ -1297,11 +1239,9 @@ setSubmissionIdsByQuestion((prev) => {
     const testName = payload?.data?.test?.test_name ?? payload?.test_name ?? payload?.test?.test_name ?? "Test Attempt";
     const instructionsText = payload?.data?.test?.instructions ?? payload?.instructions ?? payload?.test?.instructions ?? "";
 
-    // Active time section & question for render
     const activeTimeSection = timeSections[currentTimeSectionIndex];
     const activeTimeQuestionObj = getQuestionObj(activeTimeSection?.questions?.[currentQuestionIndex]);
 
-    // Active open section & question
     const activeOpenSection = openSections.find(s => s.id === currentOpenSectionId);
     const activeOpenQuestionObj = getQuestionObj(activeOpenSection?.questions?.[currentOpenQuestionIndex]);
 
@@ -1318,10 +1258,8 @@ setSubmissionIdsByQuestion((prev) => {
           </div>
         </div>
 
-        {/* Main content area */}
         <div className="flex gap-4">
-          {/* Sidebar */}
-          <div >
+          <div>
             <AttemptSidebar
               testData={payload}
               currentSection={openModeActive ? currentOpenSectionId : (activeTimeSection?.id ?? null)}
@@ -1333,12 +1271,9 @@ setSubmissionIdsByQuestion((prev) => {
             />
           </div>
 
-          {/* Content column */}
           <div className="flex-1">
-            {/* If in time mode show current time section UI */}
             {!openModeActive && activeTimeSection && (
               <div className="bg-[#2D2D30] rounded-lg p-4 border" style={{ borderColor: BORDER }}>
-               
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-semibold">{activeTimeSection.name}</div>
@@ -1361,67 +1296,57 @@ setSubmissionIdsByQuestion((prev) => {
                     {activeTimeQuestionObj?.question_text}
                   </div>
 
-                  {/* options: if MCQ -> render MCQQuestion, else fallback to previous generic rendering */}
-            {/* inside time-mode options area */}
-<div className="mt-3">
-  {activeTimeQuestionObj?.question_type === "mcq" ? (
-    <MCQQuestion
-      question={activeTimeQuestionObj}
-      onSolved={handleMcqSolvedInTimeSection}
-      onClear={handleMcqClearInTimeSection}
-      onNextWithoutSave={handleMcqNextWithoutSaveInTimeSection}
-      initialSelected={
-        // prefer in-memory question.answer, otherwise payload map by qId
-        getSavedAnswer(activeTimeSection.id, activeTimeSection?.questions?.[currentQuestionIndex], currentQuestionIndex) ?? null
-      }
-      autoSubmit={false}
-    />
-  ) : activeTimeQuestionObj?.question_type === "rearrange" ? (
-    <RearrangeQuestion
-      question={activeTimeQuestionObj}
-      onSolved={handleRearrangeSolvedInTimeSection}
-      onClear={handleRearrangeClearInTimeSection}
-      onNextWithoutSave={handleRearrangeNextWithoutSaveInTimeSection}
-      initialOrder={
-        getSavedAnswer(activeTimeSection.id, activeTimeSection?.questions?.[currentQuestionIndex], currentQuestionIndex) ?? null
-      }
-      isDrag={!!activeTimeQuestionObj?.is_drag_and_drop} // true => drag/drop, false => up/down buttons
-    />
-  )  : activeTimeQuestionObj?.question_type === "coding" ? (
-    <CodeRunner
-      question={activeTimeQuestionObj}
-      loading={false}
-      error={false}
-  initialSubmissions={
-  // prefer live state map, fallback to saved answer
-  submissionIdsByQuestion[activeTimeSection.id]?.[activeTimeQuestionObj?.id] ??
-  (getSavedAnswer(
-    activeTimeSection.id,
-    activeTimeSection?.questions?.[currentQuestionIndex],
-    currentQuestionIndex
-  ) ?? [])
-}
-onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
-    
-    />
-  ): (
-    // fallback for other types
-    (activeTimeQuestionObj?.options || []).map((opt) => (
-      <div key={opt.option_id} className="p-2 rounded-md border mb-2" style={{ borderColor: BORDER }}>
-        {opt.value}
-      </div>
-    ))
-  )}
-</div>
-
+                  <div className="mt-3">
+                    {activeTimeQuestionObj?.question_type === "mcq" ? (
+                      <MCQQuestion
+                        question={activeTimeQuestionObj}
+                        onSolved={handleMcqSolvedInTimeSection}
+                        onClear={handleMcqClearInTimeSection}
+                        onNextWithoutSave={handleMcqNextWithoutSaveInTimeSection}
+                        initialSelected={
+                          getSavedAnswer(activeTimeSection.id, activeTimeSection?.questions?.[currentQuestionIndex], currentQuestionIndex) ?? null
+                        }
+                        autoSubmit={false}
+                      />
+                    ) : activeTimeQuestionObj?.question_type === "rearrange" ? (
+                      <RearrangeQuestion
+                        question={activeTimeQuestionObj}
+                        onSolved={handleRearrangeSolvedInTimeSection}
+                        onClear={handleRearrangeClearInTimeSection}
+                        onNextWithoutSave={handleRearrangeNextWithoutSaveInTimeSection}
+                        initialOrder={
+                          getSavedAnswer(activeTimeSection.id, activeTimeSection?.questions?.[currentQuestionIndex], currentQuestionIndex) ?? null
+                        }
+                        isDrag={!!activeTimeQuestionObj?.is_drag_and_drop}
+                      />
+                    ) : activeTimeQuestionObj?.question_type === "coding" ? (
+                      <CodeRunner
+                        question={activeTimeQuestionObj}
+                        loading={false}
+                        error={false}
+                        initialSubmissions={
+                          submissionIdsByQuestion[activeTimeSection.id]?.[activeTimeQuestionObj?.id] ??
+                          (getSavedAnswer(
+                            activeTimeSection.id,
+                            activeTimeSection?.questions?.[currentQuestionIndex],
+                            currentQuestionIndex
+                          ) ?? [])
+                        }
+                        onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
+                      />
+                    ) : (
+                      (activeTimeQuestionObj?.options || []).map((opt) => (
+                        <div key={opt.option_id} className="p-2 rounded-md border mb-2" style={{ borderColor: BORDER }}>
+                          {opt.value}
+                        </div>
+                      ))
+                    )}
+                  </div>
 
                   <div className="mt-4 flex gap-2">
-                    {/* If question is MCQ we remove the explicit Mark Solved & Next Q button (selection auto-solves).
-                        For non-MCQ show the existing Mark Solved & Next Q button as before. */}
                     {activeTimeQuestionObj?.question_type !== "mcq" && (
                       <button
                         onClick={() => {
-                          // mark solved & move to next question if present
                           const qObj = getQuestionObj(activeTimeSection?.questions?.[currentQuestionIndex]);
                           const qId = qObj?.id ?? activeTimeSection?.questions?.[currentQuestionIndex]?.id;
                           if (qId) markQuestionSolved(activeTimeSection.id, qId);
@@ -1430,7 +1355,6 @@ onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
                           if (nxt < (activeTimeSection.questions || []).length) {
                             setCurrentQuestionIndex(nxt);
                           } else {
-                            // end of section; user can manually advance or wait for timer.
                             showAlert("End of section questions. You can Advance Section or wait for timer to auto-advance.");
                           }
                         }}
@@ -1443,11 +1367,11 @@ onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
 
                     <button
                       onClick={() => {
-                        // manual advance current section
-  showConfirm("Advance to next section? You will not be able to return.")
-    .then((ok) => {
-      if (ok) manualAdvanceSection();
-    });                      }}
+                        showConfirm("Advance to next section? You will not be able to return.")
+                          .then((ok) => {
+                            if (ok) manualAdvanceSection();
+                          });
+                      }}
                       className="px-3 py-2 rounded-md text-white bg-gray-700"
                     >
                       Advance Section
@@ -1457,7 +1381,6 @@ onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
               </div>
             )}
 
-            {/* If in open mode show open-section UI */}
             {openModeActive && (
               <div className="bg-[#2D2D30] rounded-lg p-4 border" style={{ borderColor: BORDER }}>
                 <div className="text-[#CCCCCC] mb-2">
@@ -1481,58 +1404,54 @@ onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
                     {activeOpenQuestionObj?.question_text}
                   </div>
 
-                <div className="mt-3">
-  {activeOpenQuestionObj?.question_type === "mcq" ? (
-    <MCQQuestion
-      question={activeOpenQuestionObj}
-      onSolved={handleMcqSolvedInOpenSection}
-      onClear={handleMcqClearInOpenSection}
-      onNextWithoutSave={handleMcqNextWithoutSaveInOpenSection}
-      initialSelected={
-        getSavedAnswer(activeOpenSection?.id, activeOpenSection?.questions?.[currentOpenQuestionIndex], currentOpenQuestionIndex) ?? null
-      }
-      autoSubmit={false}
-    />
-  ) : activeOpenQuestionObj?.question_type === "rearrange" ? (
-    <RearrangeQuestion
-      question={activeOpenQuestionObj}
-      onSolved={handleRearrangeSolvedInOpenSection}
-      onClear={handleRearrangeClearInOpenSection}
-      onNextWithoutSave={handleRearrangeNextWithoutSaveInOpenSection}
-      initialOrder={
-        getSavedAnswer(activeOpenSection?.id, activeOpenSection?.questions?.[currentOpenQuestionIndex], currentOpenQuestionIndex) ?? null
-      }
-      isDrag={!!activeOpenQuestionObj?.is_drag_and_drop}
-    />
-  ): activeOpenQuestionObj?.question_type === "coding" ? (
- <CodeRunner
-      question={activeOpenQuestionObj}
-      loading={false}
-      error={false}
-     initialSubmissions={
-  submissionIdsByQuestion[activeOpenSection?.id]?.[activeOpenQuestionObj?.id] ??
-  (getSavedAnswer(
-    activeOpenSection?.id,
-    activeOpenSection?.questions?.[currentOpenQuestionIndex],
-    currentOpenQuestionIndex
-  ) ?? [])
-}
-onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
-
-    
-    />
-  ) : (
-    (activeOpenQuestionObj?.options || []).map(opt => (
-      <div key={opt.option_id} className="p-2 rounded-md border mb-2" style={{ borderColor: BORDER }}>
-        {opt.value}
-      </div>
-    ))
-  )}
-</div>
-
+                  <div className="mt-3">
+                    {activeOpenQuestionObj?.question_type === "mcq" ? (
+                      <MCQQuestion
+                        question={activeOpenQuestionObj}
+                        onSolved={handleMcqSolvedInOpenSection}
+                        onClear={handleMcqClearInOpenSection}
+                        onNextWithoutSave={handleMcqNextWithoutSaveInOpenSection}
+                        initialSelected={
+                          getSavedAnswer(activeOpenSection?.id, activeOpenSection?.questions?.[currentOpenQuestionIndex], currentOpenQuestionIndex) ?? null
+                        }
+                        autoSubmit={false}
+                      />
+                    ) : activeOpenQuestionObj?.question_type === "rearrange" ? (
+                      <RearrangeQuestion
+                        question={activeOpenQuestionObj}
+                        onSolved={handleRearrangeSolvedInOpenSection}
+                        onClear={handleRearrangeClearInOpenSection}
+                        onNextWithoutSave={handleRearrangeNextWithoutSaveInOpenSection}
+                        initialOrder={
+                          getSavedAnswer(activeOpenSection?.id, activeOpenSection?.questions?.[currentOpenQuestionIndex], currentOpenQuestionIndex) ?? null
+                        }
+                        isDrag={!!activeOpenQuestionObj?.is_drag_and_drop}
+                      />
+                    ) : activeOpenQuestionObj?.question_type === "coding" ? (
+                      <CodeRunner
+                        question={activeOpenQuestionObj}
+                        loading={false}
+                        error={false}
+                        initialSubmissions={
+                          submissionIdsByQuestion[activeOpenSection?.id]?.[activeOpenQuestionObj?.id] ??
+                          (getSavedAnswer(
+                            activeOpenSection?.id,
+                            activeOpenSection?.questions?.[currentOpenQuestionIndex],
+                            currentOpenQuestionIndex
+                          ) ?? [])
+                        }
+                        onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
+                      />
+                    ) : (
+                      (activeOpenQuestionObj?.options || []).map(opt => (
+                        <div key={opt.option_id} className="p-2 rounded-md border mb-2" style={{ borderColor: BORDER }}>
+                          {opt.value}
+                        </div>
+                      ))
+                    )}
+                  </div>
 
                   <div className="mt-4">
-                    {/* For non-MCQ keep manual Mark Solved button */}
                     {activeOpenQuestionObj?.question_type !== "mcq" && (
                       <button
                         onClick={() => {
@@ -1552,14 +1471,11 @@ onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
               </div>
             )}
 
-            {/* Manual controls common area */}
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => {
                   console.log("[Manual Save] testId:", testId);
                   console.log("Payload snapshot:", payload);
-                  // Example: persist payload to server
-                  // privateAxios.post('/api/students/test/save-answers', { attemptId: payload.id, answers: payload.answers })
                   showAlert("Saved (console.log)");
                 }}
                 className="px-3 py-2 rounded-md text-white"
@@ -1568,20 +1484,18 @@ onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
                 Save
               </button>
 
-             <button
-  onClick={handleSubmitTest}
-  disabled={isSubmitting}
-  className="px-3 py-2 rounded-md text-white"
-  style={{ background: "#e63946" }}
->
-  {isSubmitting ? "Submitting..." : "Submit Test"}
-</button>
-
+              <button
+                onClick={handleSubmitTest}
+                disabled={isSubmitting}
+                className="px-3 py-2 rounded-md text-white"
+                style={{ background: "#e63946" }}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Test"}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Fullscreen CTA if auto failed */}
         {showEnterFsButton && !violationActive && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-50 text-white p-6 flex-col">
             <h2 className="mb-3 text-2xl">Please enter fullscreen to continue</h2>
@@ -1597,7 +1511,6 @@ onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
           </div>
         )}
 
-        {/* Violation overlay */}
         {violationActive && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/92 z-50 text-white p-6 flex-col">
             <h2 className="text-red-500 mb-3">⚠ You left fullscreen!</h2>
@@ -1626,3 +1539,4 @@ onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
 };
 
 export default Attempt;
+1
