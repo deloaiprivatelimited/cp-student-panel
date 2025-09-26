@@ -73,9 +73,30 @@ const Tests = () => {
   ];
 // inside Tests component
 // inside Tests.jsx
+// const handleAttemptTest = (test) => {
+//   const attemptUrl = `${window.location.origin}/attempt?testId=${encodeURIComponent(test.id)}`;
+//   const win = window.open(attemptUrl, "_blank", "noopener,noreferrer");
+//   if (win) win.focus();
+//   console.log("Attempting test:", test.id);
+// };
 const handleAttemptTest = (test) => {
   const attemptUrl = `${window.location.origin}/attempt?testId=${encodeURIComponent(test.id)}`;
-  const win = window.open(attemptUrl, "_blank", "noopener,noreferrer");
+
+  const windowFeatures = `
+    width=1000,
+    height=700,
+    left=200,
+    top=100,
+    resizable=yes,
+    scrollbars=yes,
+    status=no,
+    toolbar=no,
+    menubar=no,
+    location=no
+  `;
+
+  const win = window.open(attemptUrl, "AttemptTestWindow", windowFeatures);
+
   if (win) win.focus();
   console.log("Attempting test:", test.id);
 };
@@ -93,7 +114,7 @@ const handleAttemptTest = (test) => {
       {/* Search and Filter */}
       <div className="mb-6 space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: "#CCCCCC" }} />
+          <Search className="absolute left-3 tsop-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: "#CCCCCC" }} />
           <input
             type="text"
             placeholder="Search tests..."

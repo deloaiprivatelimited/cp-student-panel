@@ -162,40 +162,60 @@ export default function CodeEditor({
         {/* Editor wrapper - THIS IS THE CRITICAL PART */}
         <div className="flex-1 min-h-0" style={{ backgroundColor: '#1f1f1f' }}>
           {/* Monaco should fill this container */}
-          <Editor
-            height="100%"
-            width="100%"
-            language={languageMap[selectedLanguage] || selectedLanguage}
-            value={code}
-            onChange={(value) => onCodeChange(value || '')}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: 'on',
-              wordWrap: 'on',
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 4,
-              insertSpaces: true,
-              readOnly: isOperationInProgress,
-              folding: true,
-              lineDecorationsWidth: 10,
-              lineNumbersMinChars: 3,
-              glyphMargin: false,
-              contextmenu: true,
-              cursorBlinking: 'blink',
-              cursorSmoothCaretAnimation: 'on',
-              renderWhitespace: 'selection',
-              selectionHighlight: true,
-              occurrencesHighlight: true,
-              bracketPairColorization: { enabled: true },
-              guides: {
-                bracketPairs: true,
-                indentation: true
-              }
-            }}
-          />
+        <Editor
+  height="100%"
+  width="100%"
+  language={languageMap[selectedLanguage] || selectedLanguage}
+  value={code}
+  onChange={(value) => onCodeChange(value || '')}
+  theme="vs-dark"
+  options={{
+    minimap: { enabled: false },
+    fontSize: 14,
+    lineNumbers: 'on',
+    wordWrap: 'on',
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    tabSize: 4,
+    insertSpaces: true,
+    readOnly: isOperationInProgress,
+    folding: true,
+    lineDecorationsWidth: 10,
+    lineNumbersMinChars: 3,
+    glyphMargin: false,
+    contextmenu: true,
+    cursorBlinking: 'blink',
+    cursorSmoothCaretAnimation: 'on',
+    renderWhitespace: 'selection',
+    selectionHighlight: true,
+    occurrencesHighlight: true,
+    bracketPairColorization: { enabled: true },
+    guides: {
+      bracketPairs: true,
+      indentation: true
+    }
+  }}
+  onMount={(editor, monaco) => {
+    // Disable keyboard paste (Ctrl+V / Cmd+V)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+      // Do nothing
+    });
+
+    // Disable right-click paste from context menu
+    editor.updateOptions({ contextmenu: false });
+
+    // Block paste events from mouse / system clipboard
+    editor.onPaste?.(() => {
+      return false; // prevent paste
+    });
+
+    // Fallback: capture DOM paste
+    editor.getDomNode()?.addEventListener('paste', (e) => {
+      e.preventDefault();
+    });
+  }}
+/>
+
         </div>
 
         {/* Fixed-height Input/Output Panel */}
