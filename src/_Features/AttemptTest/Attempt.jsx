@@ -57,9 +57,10 @@ const HEADER_HEIGHT = 64; // px — change to 56/72 as you like
 
 // ---- FIXED: all durations are in seconds ----
 const INSTRUCTION_TOTAL_SECONDS = 2; // 2 minutes (seconds) — adjust as needed
-const VIOLATION_SECONDS = 30000; // 30 seconds out-of-fullscreen before auto-submit
+const VIOLATION_SECONDS = 30; // 30 seconds out-of-fullscreen before auto-submit
 const MAX_TAB_SWITCHES = 500;
 const TAB_EVENT_DEDUP_MS = 1000; // dedupe visibility/blur events within 1s
+const AUTOSAVE_INTERVAL_MS = 15 * 60 * 1000;
 
 const Attempt = () => {
   const query = useQuery();
@@ -649,7 +650,7 @@ switch (it.type) {
           privateAxios.post('/api/students/test/auto-save', { attemptId: latest.test_assignment_id, answers: latest.answers, test_id: testId })
             .catch((err) => console.error("Autosave failed", err));
         }
-      }, 5000);
+      }, AUTOSAVE_INTERVAL_MS);
 
     } catch (err) {
       console.error("Failed to fetch test payload:", err);
@@ -1090,15 +1091,35 @@ const advanceOpenQuestionAfterSave = (sectionId) => {
     handleMcqNextWithoutSaveInOpenSection();
   };
 
-  const handleMcqNextWithoutSaveInTimeSection = () => {
-    const activeTimeSection = timeSections[currentTimeSectionIndex];
-    const nxt = currentQuestionIndex + 1;
-    if (nxt < (activeTimeSection?.questions || []).length) {
-      setCurrentQuestionIndex(nxt);
-    } else {
-      showAlert("End of section questions. You can Advance Section or wait for timer to auto-advance.");
-    }
-  };
+const handleMcqNextWithoutSaveInTimeSection = () => {
+  const activeTimeSection = timeSections[currentTimeSectionIndex];
+  if (!activeTimeSection) return;
+
+  const nxt = currentQuestionIndex + 1;
+  if (nxt < (activeTimeSection?.questions || []).length) {
+    // advance index
+    setCurrentQuestionIndex(nxt);
+
+    // derive question object & robust qId fallback (match init logic)
+    const qObj = getQuestionObj(activeTimeSection.questions[nxt]);
+    const qId = qObj?.id ?? qObj?.question_id ?? String(nxt);
+
+    // mark the newly-visible question as viewed
+    setQuestionStates((prev) => ({
+      ...prev,
+      [activeTimeSection.id]: {
+        ...(prev[activeTimeSection.id] || {}),
+        [qId]: { ...(prev[activeTimeSection.id]?.[qId] || {}), viewed: true },
+      },
+    }));
+
+    return;
+  }
+
+  // no next question in this section
+  showAlert("End of section questions. You can Advance Section or wait for timer to auto-advance.");
+};
+
 
   const handleMcqClearInTimeSection = async (clearedPayload) => {
     const activeTimeSection = timeSections[currentTimeSectionIndex];
@@ -1190,7 +1211,7 @@ const advanceOpenQuestionAfterSave = (sectionId) => {
     }));
   };
 
-  const handleMcqNextWithoutSaveInOpenSection = () => {
+const handleMcqNextWithoutSaveInOpenSection = () => {
   const secIndex = openSections.findIndex((s) => s.id === currentOpenSectionId);
   if (secIndex === -1) return;
 
@@ -1199,7 +1220,26 @@ const advanceOpenQuestionAfterSave = (sectionId) => {
 
   // Move to next question if available
   if (nxt < (active?.questions || []).length) {
+    // advance index
     setCurrentOpenQuestionIndex(nxt);
+
+    // mark the next question viewed (robust qId fallback)
+    const qObj = getQuestionObj(active.questions[nxt]);
+    const qId = qObj?.id ?? qObj?.question_id ?? String(nxt);
+
+    setQuestionStates((prev) => {
+      const next = {
+        ...prev,
+        [active.id]: {
+          ...(prev[active.id] || {}),
+          [qId]: { ...(prev[active.id]?.[qId] || {}), viewed: true },
+        },
+      };
+      // optional debugging
+      // console.log('mark viewed (open next)', { section: active.id, qId, nextForSection: next[active.id] });
+      return next;
+    });
+
     return;
   }
 
@@ -1226,7 +1266,7 @@ const advanceOpenQuestionAfterSave = (sectionId) => {
       },
     }));
   } else {
-    showAlert("End of Questions.Please Submit the Test");
+    showAlert("End of Questions. Please Submit the Test");
   }
 };
 
@@ -1239,7 +1279,8 @@ const handleNextInTimeSection = () => {
   if (nxt < (activeTimeSection?.questions || []).length) {
     setCurrentQuestionIndex(nxt);
     const qObj = getQuestionObj(activeTimeSection.questions[nxt]);
-    const qId = qObj?.id ?? String(nxt);
+    const qId = qObj?.id ?? qObj?.question_id ?? String(nxt);
+    console.log(qId)
     setQuestionStates((prev) => ({
       ...prev,
       [activeTimeSection.id]: {
@@ -1266,7 +1307,7 @@ const handleNextInOpenSection = () => {
   if (nxt < (active?.questions || []).length) {
     setCurrentOpenQuestionIndex(nxt);
     const qObj = getQuestionObj(active.questions[nxt]);
-    const qId = qObj?.id ?? String(nxt);
+    const qId = qObj?.id ?? qObj?.question_id ?? String(nxt);
     setQuestionStates((prev) => ({
       ...prev,
       [active.id]: {
@@ -1360,6 +1401,21 @@ const handleNextInOpenSection = () => {
       },
     }));
   };
+  // call this near markQuestionSolved in your component
+const markQuestionViewed = (sectionId, questionId) => {
+  if (!sectionId || !questionId) return;
+  setQuestionStates((prev) => ({
+    ...prev,
+    [sectionId]: {
+      ...(prev[sectionId] || {}),
+      [questionId]: {
+        ...prev[sectionId]?.[questionId],
+        viewed: true,
+      },
+    },
+  }));
+};
+
 
   // test timer global
   useEffect(() => {
@@ -1530,11 +1586,24 @@ const handleNextInOpenSection = () => {
         <div className="flex-1">
           <h2 className="m-0 text-xl">{testName}</h2>
         </div>
+ <div className="flex items-center gap-4">
+    <div className="text-right mr-4">
+      <div className="text-[#CCCCCC] text-sm">Time Remaining</div>
+      <div className="text-[#4CA466] font-extrabold text-lg">{humanTime(secondsLeft)}</div>
+    </div>
 
-        <div className="text-right">
-          <div className="text-[#CCCCCC] text-sm">Time Remaining</div>
-          <div className="text-[#4CA466] font-extrabold text-lg">{humanTime(secondsLeft)}</div>
-        </div>
+    {/* Submit button in header */}
+    <div>
+      <button
+        onClick={handleSubmitTest}
+        disabled={isSubmitting}
+        className={`px-3 py-2 rounded-md text-white transition ${isSubmitting ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#e63946] hover:brightness-95'}`}
+        title="Submit Test"
+      >
+        {isSubmitting ? "Submitting..." : "Submit Test"}
+      </button>
+    </div>
+    </div>
       </header>
   <main
         className="pt-0"
@@ -1568,6 +1637,8 @@ const handleNextInOpenSection = () => {
   className="flex-1 overflow-hidden min-w-0"
   style={{
     height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        paddingTop: `20px`,   // <- ensure space under fixed header
+
   }}
 >
 
@@ -1670,7 +1741,7 @@ className="px-3 py-2 rounded-md text-white bg-[#4CA466] hover:brightness-95 tran
                           ) ?? [])
                         }
                         onSubmit={(submissionIds) => handleCodingSolvedInTimeSection(submissionIds)}
-                        headerHeight={HEADER_HEIGHT}
+                        headerHeight={120}
                       />
                     ) : (
                       (activeTimeQuestionObj?.options || []).map((opt) => (
@@ -1776,7 +1847,7 @@ className="px-3 py-2 rounded-md text-white bg-[#4CA466] hover:brightness-95 tran
                           ) ?? [])
                         }
                         onSubmit={(submissionIds) => handleCodingSolvedInOpenSection(submissionIds)}
-                        headerHeight={HEADER_HEIGHT}
+                        headerHeight={240}
                       />
                     ) : (
                       (activeOpenQuestionObj?.options || []).map(opt => (
@@ -1787,38 +1858,12 @@ className="px-3 py-2 rounded-md text-white bg-[#4CA466] hover:brightness-95 tran
                     )}
                   </div>
 
-                  <div className="mt-4">
-                    {activeOpenQuestionObj?.question_type !== "mcq" && (
-                      <button
-                        onClick={() => {
-                          if (!activeOpenSection) return;
-                          const qObj = getQuestionObj(activeOpenSection?.questions?.[currentOpenQuestionIndex]);
-                          const qId = qObj?.id ?? activeOpenSection?.questions?.[currentOpenQuestionIndex]?.id;
-                          if (qId) markQuestionSolved(activeOpenSection.id, qId);
-                        }}
-                        className="px-3 py-2 rounded-md text-white"
-                        style={{ background: PRIMARY }}
-                      >
-                        Mark Solved
-                      </button>
-                    )}
-                  </div>
+              
                 </div>
               </div>
             )}
 
-            <div className="mt-3 flex gap-2">
-           
-
-              <button
-                onClick={handleSubmitTest}
-                disabled={isSubmitting}
-                className="px-3 py-2 rounded-md text-white"
-                style={{ background: "#e63946" }}
-              >
-                {isSubmitting ? "Submitting..." : "Submit Test"}
-              </button>
-            </div>
+        
           </div>
           </section>
 

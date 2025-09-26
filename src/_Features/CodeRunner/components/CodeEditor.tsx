@@ -1,7 +1,8 @@
+// Replace your existing CodeEditor with this file
 import React, { useRef, useState, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
-import { Copy, Play, Send, Settings } from 'lucide-react';
-import type { Question, TestResult } from '../types';
+import { Copy, Play, Send } from 'lucide-react';
+import type { Question } from '../types';
 
 interface CodeEditorProps {
   question: Question;
@@ -50,10 +51,7 @@ export default function CodeEditor({
   onRunCode,
   onSubmitCode
 }: CodeEditorProps) {
-  // State to track submit operation
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Refs to track if operations are in progress (additional safety)
   const runningRef = useRef(false);
   const submittingRef = useRef(false);
 
@@ -65,13 +63,8 @@ export default function CodeEditor({
     }
   };
 
-  // Enhanced run handler with double-click prevention
   const handleRunCode = useCallback(async () => {
-    // Prevent double-click
-    if (isRunning || runningRef.current) {
-      return;
-    }
-
+    if (isRunning || runningRef.current) return;
     try {
       runningRef.current = true;
       await onRunCode();
@@ -80,13 +73,8 @@ export default function CodeEditor({
     }
   }, [isRunning, onRunCode]);
 
-  // Enhanced submit handler with double-click prevention
   const handleSubmitCode = useCallback(async () => {
-    // Prevent double-click
-    if (isSubmitting || submittingRef.current || isRunning) {
-      return;
-    }
-
+    if (isSubmitting || submittingRef.current || isRunning) return;
     try {
       setIsSubmitting(true);
       submittingRef.current = true;
@@ -97,16 +85,18 @@ export default function CodeEditor({
     }
   }, [isSubmitting, isRunning, onSubmitCode]);
 
-  // Determine if operations are in progress
   const isOperationInProgress = isRunning || isSubmitting;
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: '#1f1f1f' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0" style={{ backgroundColor: '#1f1f1f' }}>
+    <div className="h-full w-full flex flex-col relative" style={{ backgroundColor: '#1f1f1f' }}>
+      {/* Fixed-height header: use a predictable height so editor area is calculable */}
+      <div
+        className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0"
+        style={{ backgroundColor: '#1f1f1f' }}
+      >
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-gray-100">{question.title}</h2>
-          <span 
+          <span
             className={`px-2 py-1 text-xs font-medium rounded-full ${difficultyColors[question.difficulty]}`}
             style={{ backgroundColor: difficultyBgColors[question.difficulty] }}
           >
@@ -121,8 +111,11 @@ export default function CodeEditor({
         </div>
       </div>
 
-      {/* Language Selector and Actions */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0" style={{ backgroundColor: '#1f1f1f' }}>
+      {/* Toolbar: fixed height (so editor won't steal its space) */}
+      <div
+        className="flex items-center justify-between p-3 border-b border-gray-700 flex-shrink-0"
+        style={{ backgroundColor: '#1f1f1f' }}
+      >
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium text-gray-300">Language:</label>
           <select
@@ -139,16 +132,13 @@ export default function CodeEditor({
             ))}
           </select>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {question.run_code_enabled && (
             <button
               onClick={handleRunCode}
               disabled={isOperationInProgress}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#4CA466] border border-[#4CA466] rounded-md hover:bg-[#4CA466] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                pointerEvents: isOperationInProgress ? 'none' : 'auto'
-              }}
             >
               <Play className="w-4 h-4" />
               {isRunning ? 'Running...' : 'Run'}
@@ -159,9 +149,6 @@ export default function CodeEditor({
               onClick={handleSubmitCode}
               disabled={isOperationInProgress}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-[#4CA466] rounded-md hover:bg-[#3d8f56] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                pointerEvents: isOperationInProgress ? 'none' : 'auto'
-              }}
             >
               <Send className="w-4 h-4" />
               {isSubmitting ? 'Submitting...' : 'Submit'}
@@ -170,10 +157,11 @@ export default function CodeEditor({
         </div>
       </div>
 
-      {/* Main Content Area - Editor and Input/Output */}
+      {/* MAIN: Editor area must take remaining space */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Editor */}
+        {/* Editor wrapper - THIS IS THE CRITICAL PART */}
         <div className="flex-1 min-h-0" style={{ backgroundColor: '#1f1f1f' }}>
+          {/* Monaco should fill this container */}
           <Editor
             height="100%"
             width="100%"
@@ -210,11 +198,10 @@ export default function CodeEditor({
           />
         </div>
 
-        {/* Input/Output Panel */}
+        {/* Fixed-height Input/Output Panel */}
         <div className="border-t border-gray-700 h-48 flex-shrink-0 overflow-hidden" style={{ backgroundColor: '#1f1f1f' }}>
           <div className="h-full overflow-y-auto">
             <div className="grid grid-cols-2 gap-4 p-4 min-h-full">
-              {/* Custom Input */}
               <div className="min-w-0 flex flex-col">
                 <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <label className="text-sm font-medium text-gray-300">Custom Input</label>
@@ -237,7 +224,6 @@ export default function CodeEditor({
                 />
               </div>
 
-              {/* Output */}
               <div className="min-w-0 flex flex-col">
                 <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <label className="text-sm font-medium text-gray-300">Output</label>
@@ -252,7 +238,7 @@ export default function CodeEditor({
                     </button>
                   )}
                 </div>
-                <div 
+                <div
                   className="flex-1 w-full px-3 py-2 text-sm border border-gray-600 rounded-md overflow-auto min-h-[120px]"
                   style={{ backgroundColor: '#2f2f2f' }}
                 >
@@ -264,14 +250,7 @@ export default function CodeEditor({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Operation Status Indicator */}
-      {isOperationInProgress && (
-        <div className="absolute bottom-0 left-0 right-0 bg-[#4CA466] text-white text-center py-2 text-sm font-medium z-10">
-          {isRunning ? 'Code is running...' : isSubmitting ? 'Submitting code...' : 'Processing...'}
-        </div>
-      )}
+      </div> {/* end main */}
     </div>
   );
 }
