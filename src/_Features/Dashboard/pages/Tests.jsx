@@ -73,11 +73,71 @@ const Tests = () => {
   ];
 // inside Tests component
 // inside Tests.jsx
+// const handleAttemptTest = (test) => {
+//   const attemptUrl = `${window.location.origin}/attempt?testId=${encodeURIComponent(test.id)}`;
+//   const win = window.open(attemptUrl, "_blank", "noopener,noreferrer");
+//   if (win) win.focus();
+//   console.log("Attempting test:", test.id);
+// };
+
+// inside src/pages/Tests.jsx (replace your handleAttemptTest)
 const handleAttemptTest = (test) => {
-  const attemptUrl = `${window.location.origin}/attempt?testId=${encodeURIComponent(test.id)}`;
-  const win = window.open(attemptUrl, "_blank", "noopener,noreferrer");
-  if (win) win.focus();
-  console.log("Attempting test:", test.id);
+  const studentId = /* get student's id from your auth/store, replace below */ window?.currentStudentId || "student123";
+  const testId = test.id;
+
+  // Custom protocol URL
+  const scheme = "myapp"; // choose your scheme: "myapp"
+  const url = `${scheme}://open?studentId=${encodeURIComponent(studentId)}&testId=${encodeURIComponent(testId)}`;
+
+  // Install page fallback (web)
+  const installPage = `${window.location.origin}/install-app`;
+
+  let didOpen = false;
+  const start = Date.now();
+
+  // Try open in new window/tab (some browsers will forward to app)
+  const newWin = window.open(url, "_blank", "noopener,noreferrer");
+
+  // Some browsers block window.open(url) that triggers external protocol.
+  // We'll use a 1.2s timeout fallback — tune if needed.
+  const timeoutMs = 1200;
+
+  // Listen for page visibility change — if page becomes hidden, assume the OS switched to the app
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      didOpen = true;
+    }
+  };
+
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  // Fallback after timeout if app didn't open
+  setTimeout(() => {
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+
+    // Some browsers return a window object even if protocol failed; try checking elapsed time
+    const elapsed = Date.now() - start;
+    // heuristics: if didOpen true or elapsed too small but window closed, assume app opened
+    if (didOpen) {
+      console.log("Assumed app opened via visibility change");
+      if (newWin) newWin.close();
+      return;
+    }
+
+    // Some browsers (Chrome on Windows) will keep document visible but navigation happened — rely on window focus
+    // If the browser window lost focus, assume the app opened
+    if (document.hasFocus && !document.hasFocus()) {
+      console.log("Assumed app opened via focus loss");
+      if (newWin) newWin.close();
+      return;
+    }
+
+    // Otherwise, treat as not installed -> go to install page
+    console.log("App not installed (fallback). Redirecting to install page.");
+    // Option 1: open install page in same tab
+    window.location.href = installPage;
+    // Option 2: open install modal: window.open(installPage, "_blank");
+  }, timeoutMs);
 };
 
 
