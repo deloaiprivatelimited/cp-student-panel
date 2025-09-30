@@ -1,114 +1,88 @@
-import React ,{useState,useEffect}from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+
 import { AuthProvider } from "./_Features/Auth/AuthContext";
 import ProtectedRoute from "./_Features/Auth/ProtectedRoute";
-import Login from "./_Features/Auth/Login"
-import ResetPassword from "./_Features/Auth/ResetPassword"
-import Sidebar from "./utils/sidebar";
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import Tests from './_Features/Dashboard/pages/Tests'
+
+import Login from "./_Features/Auth/Login";
+import ResetPassword from "./_Features/Auth/ResetPassword";
+import Tests from "./_Features/Dashboard/pages/Tests";
 import Courses from "./_Features/Dashboard/pages/Courses";
-import Dashboard from './_Features/Dashboard/pages/Dashboard'
-import Navbar from "./_Features/Dashboard/components/Navbar"
-import './App.css'
-import { privateAxios } from "./utils/axios";
+import Dashboard from "./_Features/Dashboard/pages/Dashboard";
 import Attempt from "./_Features/AttemptTest/Attempt";
-// import Dashboard from "./_Features/Auth/Dashbaord";
 
-function App() {
+import Navbar from "./_Features/Dashboard/components/Navbar";
 
-   // hide Navbar only on /attempt
-  const hideNavbarRoutes = ["/attempt"];
-  const shouldShowNavbar = !hideNavbarRoutes.includes(location.pathname);
+import "./App.css";
 
-   useEffect(() => {
-   
-  
-     
-      const fetchQuestions = async () => {
-        try {
-          // GET /sections/<section_id>/questions
-          const resp = await privateAxios.get(`api/students/tests`)
-  
-          // The backend returns a response like: { success: true, message: "...", data: [...] }
-          // Adjust if your backend shape differs.
-          const payload = resp && resp.data ? resp.data : resp;
-          console.log('students')
-          console.log(payload)
-  
-        
-        } catch (err) {
-        
-              console.log(err);
-             
-          }
-      };
-  
-      // fetchQuestions();
-  
-    }, []);
+/**
+ * Keep one source of truth for navbar height.
+ * Adjust this value if you change Navbar's height.
+ */
+const NAV_HEIGHT = 64; // px (matches Navbar's h-16)
+
+function Layout() {
+  // convert px to rem-friendly/inline style if you prefer, or use Tailwind pt-16 class.
   return (
-  <Router>
-          <div className="min-h-screen" style={{ backgroundColor: '#1E1E1E' }}>
-        <main >
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#1E1E1E" }}>
+      {/* Navbar is fixed, so content must be padded from top */}
+      <Navbar height={NAV_HEIGHT} />
 
-    <AuthProvider>
-      <Toaster/>
-          {shouldShowNavbar && <Navbar />}
-        <Routes>
-                      <Route path="/login" element={<Login />} />
- <Route
-              path="/reset-password"
-              element={
-                <ProtectedRoute>
-                  <ResetPassword />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard/>
-                </ProtectedRoute>
-              }
-            />
-              <Route
-              path="/attempt"
-              element={
-                <ProtectedRoute>
-                  <Attempt/>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/tests"
-              element={
-                <ProtectedRoute>
-                  <Tests/>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/courses"
-              element={
-                <ProtectedRoute>
-                  <Courses/>
-                </ProtectedRoute>
-              }
-            />
-        </Routes>
-
-    </AuthProvider>
-          
-</main>
+      {/* main uses padding-top equal to navbar height so nothing overlaps */}
+      <main
+        className="flex-1 w-full"
+        style={{ paddingTop: NAV_HEIGHT, paddingLeft: 16, paddingRight: 16 }}
+      >
+        {/* Outlet will render nested route elements */}
+        <Outlet />
+      </main>
     </div>
-  </Router>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Toaster />
+        <Routes>
+          {/* Public (no navbar) */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Protect attempt route but don't show navbar */}
+          <Route
+            path="/attempt"
+            element={
+              <ProtectedRoute>
+                <Attempt />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* All routes nested here will show the fixed Navbar */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            {/* index -> / */}
+            <Route index element={<Dashboard />} />
+            <Route path="tests" element={<Tests />} />
+            <Route path="courses" element={<Courses />} />
+            <Route path="reset-password" element={<ResetPassword />} />
+            {/* add more nested routes here that should show the navbar */}
+          </Route>
+
+          {/* Optional: catch-all redirect (customize as needed) */}
+          {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
+        </Routes>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;

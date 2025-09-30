@@ -7,6 +7,7 @@ import RearrangeQuestion from "./RearrangeQuestion";
 import CodeRunner from "../CodeRunner";
 import { useModal } from "../../utils/ModalUtils";
 import InstructionsPanel from "./InstructionPanel";
+import useDisableCopyPaste from "../../utils/disableCopyPAste";
 const DEV_MODE = false;
 
 // small, reusable loading spinner (tailwind)
@@ -65,6 +66,8 @@ const AUTOSAVE_INTERVAL_MS = 15 * 60 * 1000;
 const Attempt = () => {
   const query = useQuery();
   const testId = query.get("testId");
+    useDisableCopyPaste({ enabled: true, allowInputs: true, blockContextMenu: true });
+
 
   const [submissionIdsByQuestion, setSubmissionIdsByQuestion] = useState({});
   const [attemptSubmitted, setAttemptSubmitted] = useState(false);
