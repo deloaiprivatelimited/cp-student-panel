@@ -42,6 +42,7 @@ function Layout() {
 }
 
 function App() {
+  console.log(localStorage.getItem("token"))
   return (
     <Router>
       <AuthProvider>

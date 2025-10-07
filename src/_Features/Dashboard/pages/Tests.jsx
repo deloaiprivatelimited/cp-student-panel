@@ -4,6 +4,7 @@ import { Search, Filter } from "lucide-react";
 import TestCard from "../components/TestCard";
 // import privateAxios from "../lib/privateAxios";
 import { privateAxios } from "../../../utils/axios";
+import { useOpenApp } from "./useOpenApp";
 const DEFAULT_LIMIT = 12;
 
 const Tests = () => {
@@ -80,26 +81,21 @@ const Tests = () => {
 //   console.log("Attempting test:", test.id);
 // };
 const handleAttemptTest = (test) => {
-  const attemptUrl = `${window.location.origin}/attempt?testId=${encodeURIComponent(test.id)}`;
+  const studentId = window?.currentStudentId || "student123";
+  const url = `myapp://open?studentId=${encodeURIComponent(studentId)}&testId=${encodeURIComponent(test.id)}`;
+  const installPage = `${window.location.origin}/install-app`;
 
-  const windowFeatures = `
-    width=1000,
-    height=700,
-    left=200,
-    top=100,
-    resizable=yes,
-    scrollbars=yes,
-    status=no,
-    toolbar=no,
-    menubar=no,
-    location=no
-  `;
+  const timeout = setTimeout(() => {
+    window.location.href = installPage; // fallback
+  }, 1200);
 
-  const win = window.open(attemptUrl, "AttemptTestWindow", windowFeatures);
+  // Try to open the app
+  window.location = url;
 
-  if (win) win.focus();
-  console.log("Attempting test:", test.id);
+  // If the browser navigates away, the timeout never runs
+  // If it fails, timeout fires → fallback
 };
+
 
 
   return (
