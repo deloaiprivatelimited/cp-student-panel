@@ -81,7 +81,7 @@ const Tests = () => {
 //   console.log("Attempting test:", test.id);
 // };
 const handleAttemptTest = (test) => {
-  const studentId = window?.currentStudentId || "student123";
+  const studentId = localStorage.getItem("token");
   const url = `myapp://open?studentId=${encodeURIComponent(studentId)}&testId=${encodeURIComponent(test.id)}`;
   const installPage = `${window.location.origin}/install-app`;
 

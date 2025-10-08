@@ -1,15 +1,18 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation ,useNavigate} from 'react-router-dom';
 import { Home, FileText, BookOpen, User } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
-
+  const navigate = useNavigate(); // <-- add useNavigate hook
   const navItems = [
     { path: '/', label: 'Dashboard', icon: Home },
     { path: '/tests', label: 'Tests', icon: FileText },
     { path: '/courses', label: 'Courses', icon: BookOpen },
-  ];
+  ]; 
+  const handleProfileClick = () => {
+    navigate('/profile-builder');
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: '#2D2D30' }}>
@@ -49,9 +52,12 @@ const Navbar = () => {
             </div>
           </div>
 
-          <div className="flex items-center">
+          <div 
+            className="flex items-center cursor-pointer"
+            onClick={handleProfileClick}
+          >
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center hover:bg-gray-500 transition-colors">
                 <User className="w-5 h-5 text-white" />
               </div>
               <span className="text-white font-medium hidden sm:block">Lokesh E</span>

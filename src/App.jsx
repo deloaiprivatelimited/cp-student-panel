@@ -11,7 +11,8 @@ import Tests from "./_Features/Dashboard/pages/Tests";
 import Courses from "./_Features/Dashboard/pages/Courses";
 import Dashboard from "./_Features/Dashboard/pages/Dashboard";
 import Attempt from "./_Features/AttemptTest/Attempt";
-
+import ProfileBuilder from "./_Features/ProfileBuilder";
+import InstallApp from "./_Features/InstallApp/installApp";
 import Navbar from "./_Features/Dashboard/components/Navbar";
 
 import "./App.css";
@@ -42,7 +43,7 @@ function Layout() {
 }
 
 function App() {
-  console.log(localStorage.getItem("token"))
+  // console.log(localStorage.getItem("token"))
   return (
     <Router>
       <AuthProvider>
@@ -75,6 +76,10 @@ function App() {
             <Route path="tests" element={<Tests />} />
             <Route path="courses" element={<Courses />} />
             <Route path="reset-password" element={<ResetPassword />} />
+            <Route path="profile-builder" element={< ProfileBuilder/ >} />
+
+                        <Route path="install-app" element={<InstallApp/ >} />
+
             {/* add more nested routes here that should show the navbar */}
           </Route>
 
